@@ -1,5 +1,30 @@
 {% extends "network/layout.html" %}
+{% load static %}
 
 {% block body %}
-    TODO
+    <!-- 1. NEW POST FORM (Should only appear once) -->
+    <div id="new-post-view" style="display: block; margin-bottom: 20px;">
+        <h3>New Post</h3>
+        <form id="post-form">
+            <div class="form-group">
+                <textarea id="post-body" class="form-control" placeholder="Write here..."></textarea>
+            </div>
+            <input type="submit" id="Post-button" value="Post" class="btn btn-primary"/>
+        </form>
+        <!-- show post posted -->
+    </div>
+    <hr>
+
+    <!-- 2. DYNAMIC CONTENT CONTAINER -->
+    <!-- JavaScript will inject all posts into this div -->
+    <div id="view-content"></div>
+
+    <!-- 3. OTHER VIEWS (Hidden by default) -->
+    <div id="following-view" style="display: none;"></div>
+    <div id="profile-view" style="display: none;"></div>
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'network/index.js' %}"></script>
 {% endblock %}
