@@ -3,13 +3,13 @@
 
 {% block body %}
     <!-- 1. NEW POST FORM (Should only appear once) -->
-    <div id="new-post-view" style="display: block; margin-bottom: 20px;">
+    <div id="new-post-view"  style="display: block; margin-bottom: 20px;">
         <h3>New Post</h3>
-        <form id="post-form">
+        <form id="post-form" data-url="{% url 'compose' %}">
             <div class="form-group">
                 <textarea id="post-body" class="form-control" placeholder="Write here..."></textarea>
             </div>
-            <input type="submit" id="Post-button" value="Post" class="btn btn-primary"/>
+            <input type="submit" id="PostButton" value="Post" class="btn btn-primary"/>
         </form>
         <!-- show post posted -->
     </div>
@@ -26,5 +26,9 @@
 {% endblock %}
 
 {% block script %}
+    <script>
+        // Define the token globally before the external JS loads
+        window.csrftoken = "{{ csrf_token }}";
+    </script>
     <script src="{% static 'network/index.js' %}"></script>
 {% endblock %}

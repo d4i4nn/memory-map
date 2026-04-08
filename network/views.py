@@ -63,7 +63,11 @@ def register(request):
     else:
         return render(request, "network/register.html")
 
-def create_post (request):
+def create_post(request):
+    print('backend reached')
+    return JsonResponse({"message": "haha!"}, status=200)
+
+    '''
     if request.method != "POST":
         return JsonResponse({"error":"POST request requires"}, status=400)
     # check user
@@ -87,3 +91,4 @@ def create_post (request):
     # convert
     else:
         return JsonResponse({"message": "Post created!", "id": new_post.id}, status=201)
+    '''
