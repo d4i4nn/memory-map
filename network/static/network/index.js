@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#post-body').value = '';
         })
     }
-  })
+    load_posts('all-posts');
+  });
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -44,4 +46,40 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+function load_posts(view) {
+  // div not a button
+    const container = document.querySelector('#view-content');
+    container.innerHTML = '';
+    // const formView = document.querySelector('#new-post-view');
+
+    container.innerHTML = `<h3>${view.replace('-', ' ').toUpperCase()}</h3>`;
+    
+    if (view === 'all-posts') {
+      fetch('/all_posts')
+      .then(response => response.json())
+
+      .then(posts => {
+        posts.forEach(post => {  
+              const postDiv = document.createElement('div');
+              postDiv.className = "card my-2 p-3 shadow-sm";
+
+              postDiv.innerHTML = `
+              <div class="d-flex justify-content-between">
+              <strong>@${post.user}</strong>
+              <small class="text-muted">${post.timestamp}</small>
+              </div>
+              <div class="mt-2">${post.body}</div>
+              <div class="mt-2 text-primary">
+                ♥️ ${post.likes}
+                </div>
+              `;
+              container.append(postDiv)
+            });
+          })
+          .catch(error => console.error('Error fetching Posts:', error));
+}
+}
+
+
 

@@ -81,3 +81,21 @@ def create_post(request):
         return JsonResponse({"error":"content is empty"}, status=400)
     
     return JsonResponse({"message": "haha!"}, status=200)
+
+def all_posts(request):
+    posts = Post.objects.all().order_by("-timestamp")
+
+    ## serialize the data into a list 
+    ## must to match the keys your JS uses
+
+    data = []
+    for post in posts:
+        data.append({
+            "id": post.id,
+            "user": post.user.username,
+            "body": post.body,
+            "timestamp": post.timestamp.strftime("%b %d %Y, %I:%M %p"),
+            "likes": post.likes.count() if hasattr(post,'likes') else 0
+        })
+
+    return JsonResponse(data, safe=False)
