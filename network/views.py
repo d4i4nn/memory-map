@@ -64,31 +64,20 @@ def register(request):
         return render(request, "network/register.html")
 
 def create_post(request):
-    print('backend reached')
-    return JsonResponse({"message": "haha!"}, status=200)
+    print("heree")
+    if request.method == "POST":
+        data = json.loads(request.body)
+        content = data.get("body", "")
 
-    '''
-    if request.method != "POST":
-        return JsonResponse({"error":"POST request requires"}, status=400)
-    # check user
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Login required"}, status=403)
-    # Parsing data from an API response
-    data = json.loads(request.body)
+        if content:
+            new_post = Post(user=request.user, body=content)
+            new_post.save()
 
-    # save data
-    new_post = Post.objects.create(
-        user=data.get('user'),
-        body=data.get('body')
-    )
-    print(data)
-
-    if data == [""]:
-        return JsonResponse({
-            "error": "post cannot be empty."
-        }, status=400)
+            return JsonResponse({
+                "message": "Post created",
+                "body": new_post.body
+            }, status=201)
+        
+        return JsonResponse({"error":"content is empty"}, status=400)
     
-    # convert
-    else:
-        return JsonResponse({"message": "Post created!", "id": new_post.id}, status=201)
-    '''
+    return JsonResponse({"message": "haha!"}, status=200)
