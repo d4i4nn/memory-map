@@ -2,7 +2,7 @@ import json
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 
 from .models import User, Post, Profile
@@ -64,7 +64,7 @@ def register(request):
         return render(request, "network/register.html")
 
 def create_post(request):
-    print("heree")
+
     if request.method == "POST":
         data = json.loads(request.body)
         content = data.get("body", "")
@@ -83,6 +83,7 @@ def create_post(request):
     return JsonResponse({"message": "haha!"}, status=200)
 
 def all_posts(request):
+    print("heree")
     posts = Post.objects.all().order_by("-timestamp")
 
     ## serialize the data into a list 
@@ -99,3 +100,28 @@ def all_posts(request):
         })
 
     return JsonResponse(data, safe=False)
+
+def profile_view(request, username):
+    return render(request, "network/index.html")
+
+def profile_data(request, username):
+    print(f"Buscando al usuario: '{username}'")
+    user = get_object_or_404(User, username__iexact=username)
+    posts = Post.objects.filter(user=user).order_by("-timestamp")
+
+    posts_list = []
+    for post in posts:
+            posts_list.append({
+            "id": post.id,
+            "user": post.user.username,
+            "body": post.body,
+            "timestamp": post.timestamp.strftime("%b %d %Y, %I:%M %p"),
+            "likes": post.likes.count() if hasattr(post,'likes') else 0
+        })
+    print(f"{request.user} was here")
+    return JsonResponse({
+            "username": user.username,
+            "followers": user.followers.count() if hasattr(user, 'followers') else 0,
+            "following": user.following.count() if hasattr(user, 'following') else 0,
+            "posts": posts_list
+            })
