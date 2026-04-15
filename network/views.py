@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-
+from django.core.paginator import Paginator
 from .models import User, Post, Profile
 
 
@@ -83,14 +83,19 @@ def create_post(request):
     return JsonResponse({"message": "haha!"}, status=200)
 
 def all_posts(request):
-    print("heree")
-    posts = Post.objects.all().order_by("-timestamp")
+
+    posts_query = Post.objects.all().order_by("-timestamp")
+
+    # 10 pags by page
+    paginator = Paginator(posts_query, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     ## serialize the data into a list 
     ## must to match the keys your JS uses
 
     data = []
-    for post in posts:
+    for post in page_obj:
         data.append({
             "id": post.id,
             "user": post.user.username,
@@ -98,8 +103,13 @@ def all_posts(request):
             "timestamp": post.timestamp.strftime("%b %d %Y, %I:%M %p"),
             "likes": post.likes.count() if hasattr(post,'likes') else 0
         })
-
-    return JsonResponse(data, safe=False)
+    return JsonResponse({
+        "posts": data,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+        "current_page": page_obj.number,
+        "total_pages": paginator.num_pages
+    }, safe=False)
 
 def profile_view(request, username):
     return render(request, "network/index.html")
@@ -118,7 +128,6 @@ def profile_data(request, username):
             "timestamp": post.timestamp.strftime("%b %d %Y, %I:%M %p"),
             "likes": post.likes.count() if hasattr(post,'likes') else 0
         })
-    print(f"{request.user} was here")
     return JsonResponse({
             "username": user.username,
             "followers": user.followers.count() if hasattr(user, 'followers') else 0,

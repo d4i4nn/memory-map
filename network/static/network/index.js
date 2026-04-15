@@ -61,23 +61,20 @@ function getCookie(name) {
     return cookieValue;
 }
 
-function load_posts(view) {
+function load_posts(view, page = 1) {
   // div not a button
     const container = document.querySelector('#view-content');
-    container.innerHTML = '';
-    // const formView = document.querySelector('#new-post-view');
-
     container.innerHTML = `<h3>${view.replace('-', ' ').toUpperCase()}</h3>`;
-    
+    // container.innerHTML = '';
+    // const formView = document.querySelector('#new-post-view');  
     if (view === 'all-posts') {
-      fetch('/all_posts')
+      fetch(`/all_posts/?page=${page}`)
       .then(response => response.json())
 
-      .then(posts => {
-        posts.forEach(post => {  
+      .then(data => {
+        data.posts.forEach(post => {  
               const postDiv = document.createElement('div');
               postDiv.className = "card my-2 p-3 shadow-sm";
-
               postDiv.innerHTML = `
               <div class="d-flex justify-content-between">
               <strong>@${post.user}</strong>
@@ -90,9 +87,29 @@ function load_posts(view) {
               `;
               container.append(postDiv)
             });
+            // page buttons
+            const nav = document.createElement('div');
+            nav.className = "pagination mt-4";
+
+            if (data.has_previous) {
+              const prevBtn = document.createElement('button');
+              prevBtn.innerText = "Previous";
+              prevBtn.className = "btn btn-outline-primary ml-2";
+              prevBtn.onclick = () => load_posts(view, data.current_page - 1);
+              nav.append(prevBtn);
+            }
+            
+            if (data.has_next) {
+              const nextBtn = document.createElement('button');
+              nextBtn.innerText = "Next";
+              nextBtn.className = "btn btn-outline-primary ml-2";
+              nextBtn.onclick = () => load_posts(view, data.current_page - 1);
+              nav.append(nextBtn);
+            }
+            container.append(nav);
           })
-          .catch(error => console.error('Error fetching Posts:', error));
-}
+          .catch(error => console.error('Error:', error));
+  }
 }
 
 
