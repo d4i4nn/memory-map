@@ -72,12 +72,19 @@ function load_posts(view, page = 1) {
       .then(response => response.json())
 
       .then(data => {
+
         data.posts.forEach(post => {  
               const postDiv = document.createElement('div');
+              
               postDiv.className = "card my-2 p-3 shadow-sm";
               postDiv.innerHTML = `
               <div class="d-flex justify-content-between">
-              <strong>@${post.user}</strong>
+              <a href="javascript:void(0)" 
+               onclick="load_profile('${post.user}')" 
+               class="font-weight-bold text-decoration-none" 
+               style="color: #007bff; cursor: pointer;">
+               @${post.user}
+              </a>
               <small class="text-muted">${post.timestamp}</small>
               </div>
               <div class="mt-2">${post.body}</div>
@@ -118,33 +125,104 @@ function load_profile(username) {
     const container = document.querySelector('#view-content');
     container.innerHTML = '';
     
-    fetch(`/api/profile/${username}`)
-      .then(response => response.json())
-
+    fetch(`/profile_data/${username}`)
+      .then(response => {
+        if (!response.ok) {
+                throw new Error(`Error en el servidor: ${response.status}`);
+            }
+            return response.json();
+          })
       .then(data => {
-
         const header = document.createElement('div');
         header.className = "profile-header p-4 border-bottom";
-        header.innerHTML = `
-              <h2>${data.username}'s profile</h2>
-              <div class="d-flex justify-content-between">
-              <div class="mr-4"><strong>@${data.following}</strong> Following</div>
-              <div><strong>${data.followers}</strong> Followers</div>
-            </div>
-          `;
-          container.append(header);
 
-          // Posts
-          data.posts.forEach(post => {
-            const postDiv = document.createElement('div');
-            postDiv.className = "card my-2 p-3";
-            postDiv.innerHTML = `
-            <p>${post.body}</p>
-            <small class="text-muted">${post.timestamp} | ♥️ ${post.likes}</small>
-            `;
-            container.append(postDiv);
+        let followButton = '';
+              if (!data.is_self) {
+                  followButton = `
+                      <button id="follow-btn" class="btn ${data.is_following ? 'btn-outline-danger' : 'btn-primary'} btn-sm mt-2">
+                          ${data.is_following ? 'Unfollow' : 'Follow'}
+                      </button>
+                  `;
+              }
+
+            header.innerHTML = `
+                  <h2>${data.username}'s profile</h2>
+                  <div class="d-flex justify-content-between">
+                  <div class="mr-4"><strong>@${data.following}</strong> Following</div>
+                  <div class="ml-3">
+                  <strong id="followers-count">${data.followers}</strong> Followers</div>
+                </div>
+                ${followButton}
+              `;
+              container.append(header);
+              const btn = document.querySelector('#follow-btn');
+              if (btn) {
+                  btn.onclick = () => {
+                    console.log("followed");
+                    toggle_follow(data.username);
+                  }
+              };
+
+              // Posts
+              data.posts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.className = "card my-2 p-3";
+                postDiv.innerHTML = `
+                <p>${post.body}</p>
+                <small class="text-muted">${post.timestamp} | ♥️ ${post.likes}</small>
+                `;
+                container.append(postDiv);
+              });
+            })
+            .catch(error => {
+              console.error('Error detallado:', error);
+              container.innerHTML = '<p>No se pudo cargar el perfil.</p>';
           });
-        });
+}
+
+function toggle_follow(username) {
+    const csrftoken = getCookie('csrftoken'); 
+
+    fetch(`/toggle_follow/${username}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({
+          username: username
+        })
+    })
+    
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => { throw new Error(text)});
+      }
+      return response.json();
+    })
+    ///here is not working
+    .then(result => {
+      console.log("toggle")
+      const btn = document.querySelector('#follow-btn');
+      const followersCount = document.querySelector('#followers-count');
+      
+        if (btn && result.action) {
+            // Actualizar el botón
+            if (result.action === "followed") {
+                btn.innerText = "Unfollow";
+                btn.className = "btn btn-outline-danger btn-sm mt-2";
+            } else {
+                btn.innerText = "Follow";
+                btn.className = "btn btn-primary btn-sm mt-2";
+            }
+
+            if (followersCount && result.count !== undefined) {
+              followersCount.innerText = result.count;
+            }
+
+        }
+    })
+    .catch(error => console.error("Error en el toggle:", error));
 }
 
 

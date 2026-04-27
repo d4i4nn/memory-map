@@ -116,11 +116,23 @@ def profile_view(request, username):
 
 def profile_data(request, username):
     print(f"Buscando al usuario: '{username}'")
-    user = get_object_or_404(User, username__iexact=username)
-    posts = Post.objects.filter(user=user).order_by("-timestamp")
+    user_to_view = get_object_or_404(User, username__iexact=username)
+    profile, created = Profile.objects.get_or_create(user=user_to_view)
+    profile = user_to_view.profile
+
+    posts_query = Post.objects.filter(user=user_to_view).order_by("-timestamp")
+    paginator = Paginator(posts_query, 10)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    ## follow logic
+    is_following = False
+    if request.user.is_authenticated and request.user != user_to_view:
+        if request.user.profile.following.filter(id=profile.id).exists():
+            is_following = True
 
     posts_list = []
-    for post in posts:
+    for post in page_obj:
             posts_list.append({
             "id": post.id,
             "user": post.user.username,
@@ -129,8 +141,39 @@ def profile_data(request, username):
             "likes": post.likes.count() if hasattr(post,'likes') else 0
         })
     return JsonResponse({
-            "username": user.username,
-            "followers": user.followers.count() if hasattr(user, 'followers') else 0,
-            "following": user.following.count() if hasattr(user, 'following') else 0,
-            "posts": posts_list
+            "username": user_to_view.username,
+            "followers": profile.followers.count() if hasattr(profile, 'followers') else 0,
+            "following": profile.following.count() if hasattr(profile, 'following') else 0,
+            "is_following": is_following,
+            "is_self": request.user == user_to_view,
+            "posts": posts_list,
+            "has_next": page_obj.has_next(),
+            "current_page": page_obj.number
             })
+
+
+def toggle_follow(request, username):
+    try:
+        print(f"${username}")
+        target_user = User.objects.get(username=username)
+        target_profile = target_user.profile
+        my_profile = request.user.profile
+
+        if my_profile == target_profile:
+            return JsonResponse({"error": "no"}, status=400)
+        
+        #logic
+        if my_profile.following.filter(id=target_profile.id).exists():
+            my_profile.following.remove(target_profile)
+            action= "unfollowed"
+        else:
+            my_profile.following.add(target_profile)
+            action = "followed"
+        return JsonResponse({
+            "status": "success",
+            "action": action,
+            "count": target_profile.followers.count()
+        })
+    except User.DoesNotExist:
+        return JsonResponse({"error": "no exists"}, status=404)
+        
