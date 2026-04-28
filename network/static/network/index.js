@@ -72,51 +72,68 @@ function load_posts(view, page = 1) {
       .then(response => response.json())
 
       .then(data => {
+        console.log(data);
 
         data.posts.forEach(post => {  
-              const postDiv = document.createElement('div');
-              
-              postDiv.className = "card my-2 p-3 shadow-sm";
-              postDiv.innerHTML = `
-              <div class="d-flex justify-content-between">
-              <a href="javascript:void(0)" 
-               onclick="load_profile('${post.user}')" 
-               class="font-weight-bold text-decoration-none" 
-               style="color: #007bff; cursor: pointer;">
-               @${post.user}
-              </a>
-              <small class="text-muted">${post.timestamp}</small>
-              </div>
-              <div class="mt-2">${post.body}</div>
-              <div class="mt-2 text-primary">
-                ♥️ ${post.likes}
-                </div>
-              `;
-              container.append(postDiv)
-            });
-            // page buttons
-            const nav = document.createElement('div');
-            nav.className = "pagination mt-4";
+          likeButton = `
+                      <button id="like-btn" class="btn btn-sm mt-2">
+                      ♥️
+                      </button>
+                  `;
 
-            if (data.has_previous) {
-              const prevBtn = document.createElement('button');
-              prevBtn.innerText = "Previous";
-              prevBtn.className = "btn btn-outline-primary ml-2";
-              prevBtn.onclick = () => load_posts(view, data.current_page - 1);
-              nav.append(prevBtn);
-            }
-            
-            if (data.has_next) {
-              const nextBtn = document.createElement('button');
-              nextBtn.innerText = "Next";
-              nextBtn.className = "btn btn-outline-primary ml-2";
-              nextBtn.onclick = () => load_posts(view, data.current_page - 1);
-              nav.append(nextBtn);
-            }
-            container.append(nav);
-          })
-          .catch(error => console.error('Error:', error));
-  }
+          const postDiv = document.createElement('div');
+          postDiv.className = "card my-2 p-3 shadow-sm";
+
+          postDiv.innerHTML = `
+          <div class="d-flex justify-content-between">
+          <a href="javascript:void(0)" 
+            onclick="load_profile('${post.user}')" 
+            class="font-weight-bold text-decoration-none" 
+            style="color: #007bff; cursor: pointer;">
+            @${post.user}
+          </a>
+          <small class="text-muted">${post.timestamp}</small>
+          </div>
+          <div class="mt-2">${post.body}</div>
+          <div class="mt-2 text-primary">
+          ${likeButton}${post.likes}
+            </div>
+          `;
+          // like button
+          container.append(postDiv);
+          const btn = document.querySelector('#like-btn');
+          if (btn) {
+              btn.onclick = () => {
+                console.log("liked");
+                like_post(post.user);
+              }
+        };
+        })
+
+        // page buttons
+        const nav = document.createElement('div');
+        nav.className = "pagination mt-4";
+
+        if (data.has_previous) {
+          const prevBtn = document.createElement('button');
+          prevBtn.innerText = "Previous";
+          prevBtn.className = "btn btn-outline-primary ml-2";
+          prevBtn.onclick = () => load_posts(view, data.current_page - 1);
+          nav.append(prevBtn);
+        }
+        
+        if (data.has_next) {
+          const nextBtn = document.createElement('button');
+          nextBtn.innerText = "Next";
+          nextBtn.className = "btn btn-outline-primary ml-2";
+          nextBtn.onclick = () => load_posts(view, data.current_page - 1);
+          nav.append(nextBtn);
+        }
+        container.append(nav);
+
+      })
+      .catch(error => console.error('Error:', error));
+    }
 }
 
 
@@ -200,7 +217,7 @@ function toggle_follow(username) {
       }
       return response.json();
     })
-    ///here is not working
+
     .then(result => {
       console.log("toggle")
       const btn = document.querySelector('#follow-btn');
@@ -226,4 +243,31 @@ function toggle_follow(username) {
 }
 
 
+function like_post(post) {
+  const csrftoken = getCookie('csrftoken'); 
+
+  fetch(`/like_post/%{post}`, {
+    method: 'POST',
+    headers: {
+          'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+  //   body: JSON.stringify({
+  //   post: post
+  // })
+  })
+  .then(response => response.json())
+  .then (data => {
+    const btn = document.querySelector('#likes-btn');
+    const likesCount = document.querySelector('#likes-count');
+    
+    if (data.action === "liked") {
+      icon.classList.add('text-danger');
+    } else {
+      icon.classList.remove('text-danger');
+    }
+    couuntSpan.innert = data.likesCount;
+  });
+}
+  
 

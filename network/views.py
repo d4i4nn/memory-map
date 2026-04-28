@@ -177,3 +177,10 @@ def toggle_follow(request, username):
     except User.DoesNotExist:
         return JsonResponse({"error": "no exists"}, status=404)
         
+
+def toggle_like(request, post):
+    try:
+        print(f"nuevo dia")
+        
+    except Post.DoesNotExist:
+        return JsonResponse({"error": "no exists"}, status=404)
