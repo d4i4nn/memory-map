@@ -76,9 +76,10 @@ function load_posts(view, page = 1) {
 
         data.posts.forEach(post => {  
           likeButton = `
-                      <button id="like-btn" class="btn btn-sm mt-2">
+                      <button class="like-btn" class="btn btn-sm mt-2">
                       ♥️
                       </button>
+                      <span class="like-count">${post.likes}</span>
                   `;
 
           const postDiv = document.createElement('div');
@@ -96,16 +97,14 @@ function load_posts(view, page = 1) {
           </div>
           <div class="mt-2">${post.body}</div>
           <div class="mt-2 text-primary">
-          ${likeButton}${post.likes}
+          ${likeButton}
             </div>
           `;
-          // like button
           container.append(postDiv);
-          const btn = document.querySelector('#like-btn');
+          const btn = postDiv.querySelector('.like-btn');
           if (btn) {
               btn.onclick = () => {
-                console.log("liked");
-                like_post(post.user);
+                like_post(post.id, btn);
               }
         };
         })
@@ -243,31 +242,30 @@ function toggle_follow(username) {
 }
 
 
-function like_post(post) {
-  const csrftoken = getCookie('csrftoken'); 
+function like_post(postId, likeButton) {
 
-  fetch(`/like_post/%{post}`, {
+  const csrftoken = getCookie('csrftoken');
+  console.log("ID del post que voy a likear:", postId);
+
+  fetch(`/like_post/${postId}`, {
     method: 'POST',
     headers: {
           'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken,
         },
-  //   body: JSON.stringify({
-  //   post: post
-  // })
   })
   .then(response => response.json())
   .then (data => {
-    const btn = document.querySelector('#likes-btn');
-    const likesCount = document.querySelector('#likes-count');
-    
-    if (data.action === "liked") {
-      icon.classList.add('text-danger');
-    } else {
-      icon.classList.remove('text-danger');
+    if (data.status === "success") {
+      const countSpan = likeButton.parentElement.querySelector('.like-count');
+      if (countSpan) {
+        console.log("updating", data.like_count);
+        countSpan.innerText = data.like_count;
+      }
+      likeButton.style.color = (data.action === "liked") ? "red" : "black";
     }
-    couuntSpan.innert = data.likesCount;
-  });
+    })
+    .catch(error => console.error("Error", error));
 }
   
 

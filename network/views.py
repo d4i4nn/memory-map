@@ -178,9 +178,23 @@ def toggle_follow(request, username):
         return JsonResponse({"error": "no exists"}, status=404)
         
 
-def toggle_like(request, post):
+def toggle_like(request, post_id):
     try:
         print(f"nuevo dia")
-        
+        post = Post.objects.get(id=post_id)
+        user = request.user
+
+        if post.likes.filter(id=user.id).exists():
+            post.likes.remove(user)
+            action = "unliked"
+        else:
+            post.likes.add(user)
+            action = "liked"
+        return JsonResponse({
+            "status": "success",
+            "action": action,
+            "like_count": post.likes.count()
+        })
+
     except Post.DoesNotExist:
         return JsonResponse({"error": "no exists"}, status=404)
