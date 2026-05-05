@@ -81,6 +81,14 @@ function load_posts(view, page = 1) {
                       </button>
                       <span class="like-count">${post.likes}</span>
                   `;
+          let editButton = '';
+              if (post.is_owner) {
+                  editButton = `
+                      <button class="edit-btn" btn-outline-info btn-sm mt-2">
+                      Edit
+                      </button>
+                  `;
+              }
 
           const postDiv = document.createElement('div');
           postDiv.className = "card my-2 p-3 shadow-sm";
@@ -95,12 +103,22 @@ function load_posts(view, page = 1) {
           </a>
           <small class="text-muted">${post.timestamp}</small>
           </div>
-          <div class="mt-2">${post.body}</div>
+          <div class="mt-2 body-container">${post.body}</div>
           <div class="mt-2 text-primary">
           ${likeButton}
             </div>
+          <div class="mt-2 text-primary">
+          ${editButton}
+            </div>
           `;
           container.append(postDiv);
+          // add edit event
+          if (post.is_owner) {
+          const btn = postDiv.querySelector('.edit-btn');
+          btn.onclick = () => {
+            edit_post(post.id, postDiv);
+            };
+          }
           const btn = postDiv.querySelector('.like-btn');
           if (btn) {
               btn.onclick = () => {
@@ -268,4 +286,53 @@ function like_post(postId, likeButton) {
     .catch(error => console.error("Error", error));
 }
   
+function edit_post(postID, postDiv) {
+  const bodyContainer = postDiv.querySelector('.body-container');
+  if (!bodyContainer) {
+        console.error("No se encontró .body-container dentro de postDiv");
+        return;
+    }
 
+  const originalContent = bodyContainer.innerText;
+
+  bodyContainer.innerHTML = `
+    <textarea class="form-control edit-textarea">${originalContent}</textarea>
+    <button class="btn btn-success btn-sm mt-2 save-btn">Save</button>
+    <button class="btn btn-success btn-sm mt-2 cancel-btn">Cancel</button>
+  `;
+
+  const cancelBtn = postDiv.querySelector('.cancel-btn');
+  const saveBtn = postDiv.querySelector('.save-btn');
+
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      bodyContainer.innerText = originalContent;
+    };
+  }
+
+  if (saveBtn) {
+      saveBtn.onclick = () => {
+      const newContent = postDiv.querySelector('.edit-textarea').value;
+      save_post(postID, newContent, bodyContainer);
+    };
+  }
+}
+
+function save_post(postID, content, container) {
+  fetch(`/edit_post/${postID}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify({ body: content})
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === "success") {
+      container.innerText = content;
+    } else {
+      alert(data.error);
+    }
+  })
+}

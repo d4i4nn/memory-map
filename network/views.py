@@ -101,7 +101,8 @@ def all_posts(request):
             "user": post.user.username,
             "body": post.body,
             "timestamp": post.timestamp.strftime("%b %d %Y, %I:%M %p"),
-            "likes": post.likes.count() if hasattr(post,'likes') else 0
+            "likes": post.likes.count() if hasattr(post,'likes') else 0,
+            "is_owner": post.user == request.user
         })
     return JsonResponse({
         "posts": data,
@@ -198,3 +199,29 @@ def toggle_like(request, post_id):
 
     except Post.DoesNotExist:
         return JsonResponse({"error": "no exists"}, status=404)
+    
+
+def edit_post(request, post_id):
+    if request.method == "POST":
+        try:
+            post = Post.objects.get(pk=post_id)
+
+            if post.user != request.user:
+                return JsonResponse({"error": "forbidden"}, status=403)
+            
+            data = json.loads(request.body)
+            new_content = data.get("body", "")
+
+            if new_content.strip() == "":
+                return JsonResponse({"error": "cannot be empty"}, status=400)
+            
+            post.body = new_content
+            post.save()
+
+            return JsonResponse({
+                "status": "success",
+                "message": "Post updated",
+                "body": post.body
+            })
+        except Post.DoesNotExist:
+            return JsonResponse({"error": "Post not found"}, status=404)
