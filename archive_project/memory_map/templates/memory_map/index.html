@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Memory Map Archive</title>
+    <!-- CSS de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: 'Georgia', serif; 
+            background-color: #fcfcfc; 
+        }
+        .toolbar { display: flex; gap: 10px; margin-bottom: 15px; }
+        .main-container { display: flex; width: 100%; height: 600px; gap: 10px; }
+        
+        /* Forzamos que el mapa se vea sí o sí */
+        #map { 
+            flex: 1; 
+            height: 600px !important; 
+            min-height: 600px;
+            background: #e5e3df; /* Color gris de fondo para ver si el contenedor existe */
+            border: 1px solid #ccc; 
+        }
+        #sidebar { 
+            width: 0; 
+            height: 100%; 
+            background: #fdfdfd; 
+            transition: 0.5s; 
+            overflow: hidden;
+        }
+    </style>
+    </head>
+<body>
+    <h1>Archivo de la Memoria</h1>
+    <div class="toolbar">
+        <div id="filter-container">
+            <select id="category-filter" onchange="filterMarkers()">
+                <option value="all">Todas las memorias</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name_es }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="filter-time">
+            <select id="time-filter" onchange="filterTime()">
+                <option value="all">Seleccionar año</option>
+                {% for date_occurred in incidents %}
+                    <option value="{{ date_occurred }}">{{ date_occurred }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="main-container">
+
+        <div id="map"></div>
+
+        <div id="sidebar">
+            <div class="sidebar-content">
+                <span class="close-btn" onclick="closeSidebar()">&times;</span>
+                <div id="content-area">
+                    <h3>Qué pasó</h3>
+                    <p>Selecciona un punto en el mapa para leer más</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JS de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicializar el mapa en Argentina
+        var map = L.map('map').setView([-34.6037, -58.3816], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Iteramos sobre los incidentes que pasamos desde la vista
+        {% for incident in incidents %}
+            L.marker([{{ incident.latitude|stringformat:"f" }}, {{ incident.longitude|stringformat:"f" }}])
+                .addTo(map)
+                .bindPopup("<b>{{ incident.title_es|escapejs }}</b><br>{{ incident.description_es|truncatewords:20|escapejs }}");
+        {% endfor %}
+
+        // functions
+        function filterMarkers() { console.log("Filtring"); }
+        function filterTime() { console.log("Filtring timing"); }
+        function closeSidebar() { document.getElementById('sidebar').style.display = 'none'; }
+    </script>
+
+</body>
+</html>

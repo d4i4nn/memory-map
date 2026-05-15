@@ -1,0 +1,82 @@
+/* 1. Flujo normal y limpio para el cuerpo de la página */
+body { 
+    margin: 0; 
+    padding: 20px;
+    font-family: 'Georgia', serif; 
+    background-color: #fcfcfc;
+    box-sizing: border-box;
+}
+
+/* 2. Barra de filtros arriba del mapa */
+.toolbar {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.toolbar select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: white;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* 3. Contenedor principal: este SÍ lleva flex para alinear Mapa y Sidebar */
+.main-container {
+    display: flex; 
+    width: 100%;
+    height: 75vh; /* Le da una altura responsiva basada en la pantalla */
+    min-height: 500px;
+    gap: 0; /* Quitamos el gap para que la transición de la sidebar sea fluida */
+}
+
+/* 4. El Mapa se estira dinámicamente */
+#map { 
+    flex: 1; 
+    height: 100%; /* Toma el 100% de la altura de .main-container */
+    min-width: 0; 
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+}
+
+/* 5. La Sidebar con tu efecto de apertura (empieza en 0) */
+#sidebar {
+    width: 0; /* Empieza cerrada. Con JS le aplicarás una clase o estilo de width: 350px */
+    height: 100%; /* Misma altura que el contenedor y el mapa */
+    background: #fdfdfd;
+    overflow-y: auto;
+    transition: width 0.5s ease; /* Transición suave enfocada solo en el ancho */
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    border: 1px solid #ddd;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    box-sizing: border-box;
+}
+
+/* Estilos internos de la barra lateral */
+.sidebar-content { 
+    padding: 30px; 
+    line-height: 1.6; 
+    color: #333; 
+    min-width: 290px; /* Evita que el texto se aplaste feo mientras se abre */
+}
+
+.sidebar-content h2 { 
+    font-family: 'Helvetica', sans-serif; 
+    border-bottom: 2px solid #e02424; 
+    padding-bottom: 10px; 
+    margin-top: 0;
+}
+
+.close-btn {
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+    color: #999;
+}
+
+.close-btn:hover {
+    color: #333;
+}
