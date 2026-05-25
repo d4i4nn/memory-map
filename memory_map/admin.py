@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import Category, Time, Incident
+from .models import Category, Incident, HistoricalPeriod
 # Register your models here.
 
 admin.site.register(Category)
-admin.site.register(Time)
+admin.site.register(HistoricalPeriod)
 admin.site.register(Incident)

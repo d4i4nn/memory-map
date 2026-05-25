@@ -4,7 +4,8 @@ from .models import Incident, Category
 def index(request):
     categories = Category.objects.all()
     # Importante: incluimos 'category_id' para que JS pueda filtrar
-    incidents_list = list(Incident.objects.filter(is_approved=True).values(
+    incidents_list = list(
+        Incident.objects.filter(status='approved').values(
         'title_es', 
         'description_es', 
         'latitude', 

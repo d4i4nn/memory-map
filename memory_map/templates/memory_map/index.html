@@ -1,0 +1,1153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Map Archive</title>
+ 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+ 
+    <style>
+        /* ── Reset & base ─────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+        body {
+            font-family: 'Georgia', serif;
+            font-size: 14px;
+            background: #f7f5f2;
+            color: #2c2c2a;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+ 
+        /* ── Top bar ──────────────────────────────────────────────── */
+        #topbar {
+            height: 52px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            gap: 14px;
+            flex-shrink: 0;
+            z-index: 1000;
+        }
+ 
+        #topbar h1 {
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: .02em;
+            color: #1a1a18;
+            flex: 1;
+        }
+ 
+        /* Language toggle */
+        #lang-toggle {
+            display: flex;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow: hidden;
+            font-size: 12px;
+        }
+ 
+        #lang-toggle button {
+            padding: 4px 10px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #888;
+            font-size: 12px;
+        }
+ 
+        #lang-toggle button.active {
+            background: #2c2c2a;
+            color: #fff;
+        }
+ 
+        /* ── Three-column layout ──────────────────────────────────── */
+        #app {
+            display: grid;
+            grid-template-columns: 260px 1fr 300px;
+            flex: 1;
+            overflow: hidden;
+        }
+ 
+        /* ── Left sidebar: filters ────────────────────────────────── */
+        #sidebar-filters {
+            background: #fff;
+            border-right: 1px solid #e4e2de;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+ 
+        .sb-section {
+            padding: 14px 16px;
+            border-bottom: 1px solid #ece9e4;
+        }
+ 
+        .sb-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 10px;
+        }
+ 
+        /* Search input */
+        #search-input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            background: #fafaf8;
+            color: #2c2c2a;
+            outline: none;
+        }
+ 
+        #search-input:focus { border-color: #888; }
+ 
+        /* Category pills */
+        #category-list { display: flex; flex-wrap: wrap; gap: 6px; }
+ 
+        .cat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: opacity .15s;
+            user-select: none;
+        }
+ 
+        .cat-pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+ 
+        .cat-pill.inactive { opacity: .45; }
+ 
+        /* Time range */
+        #year-slider { width: 100%; accent-color: #2c2c2a; }
+ 
+        .year-range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+ 
+        #year-display {
+            text-align: center;
+            font-size: 12px;
+            color: #555;
+            margin-top: 6px;
+        }
+ 
+        /* Verified toggle */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #444;
+        }
+ 
+        /* Collaborate button */
+        #btn-collaborate {
+            margin: 14px 16px;
+            width: calc(100% - 32px);
+            padding: 9px;
+            border: 1px solid #2c2c2a;
+            border-radius: 7px;
+            background: transparent;
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            color: #2c2c2a;
+            font-weight: 500;
+            transition: background .15s, color .15s;
+        }
+ 
+        #btn-collaborate:hover { background: #2c2c2a; color: #fff; }
+ 
+        /* Results count */
+        #results-count {
+            padding: 10px 16px 0;
+            font-size: 11px;
+            color: #aaa;
+        }
+ 
+        /* ── Map ──────────────────────────────────────────────────── */
+        #map {
+            height: 100%;
+            background: #e5e3df;
+            z-index: 1;
+        }
+ 
+        /* ── Right sidebar: incident detail ───────────────────────── */
+        #sidebar-detail {
+            background: #fff;
+            border-left: 1px solid #e4e2de;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            transition: opacity .25s;
+        }
+ 
+        #detail-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #bbb;
+            font-size: 13px;
+            text-align: center;
+            padding: 24px;
+        }
+ 
+        #detail-empty .icon { font-size: 32px; opacity: .4; }
+ 
+        #detail-content { display: none; flex-direction: column; flex: 1; }
+        #detail-content.visible { display: flex; }
+ 
+        #detail-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #ece9e4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bbb;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+ 
+        #detail-img img { width: 100%; height: 100%; object-fit: cover; }
+ 
+        .detail-header { padding: 14px 16px 10px; border-bottom: 1px solid #ece9e4; }
+ 
+        .detail-cat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+ 
+        .detail-cat-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+ 
+        #detail-title {
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
+            color: #1a1a18;
+            margin-bottom: 4px;
+        }
+ 
+        #detail-meta { font-size: 11px; color: #888; }
+ 
+        #detail-verified {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-top: 6px;
+        }
+ 
+        #detail-verified.yes { background: #e8f5ec; color: #1a6e35; }
+        #detail-verified.pending { background: #fff4e0; color: #8a5c00; }
+ 
+        .detail-body { padding: 14px 16px; font-size: 13px; line-height: 1.7; color: #444; flex: 1; }
+ 
+        .detail-tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 5px; }
+ 
+        .detail-tag {
+            font-size: 10px;
+            padding: 3px 9px;
+            border-radius: 10px;
+            background: #f1efe8;
+            color: #5f5e5a;
+        }
+ 
+        .detail-sources { padding: 12px 16px; border-top: 1px solid #ece9e4; }
+ 
+        .detail-sources a {
+            display: block;
+            font-size: 12px;
+            color: #185fa5;
+            text-decoration: none;
+            margin-bottom: 4px;
+        }
+ 
+        .detail-sources a:hover { text-decoration: underline; }
+ 
+        #btn-share {
+            margin: 12px 16px 16px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 7px;
+            background: transparent;
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            color: #555;
+        }
+ 
+        /* ── Modal: collaboration form ────────────────────────────── */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+ 
+        #modal-overlay.open { display: flex; }
+ 
+        #modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 440px;
+            max-height: 88vh;
+            overflow-y: auto;
+            padding: 24px;
+        }
+ 
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+ 
+        .modal-header h2 { font-size: 16px; font-weight: 600; color: #1a1a18; }
+ 
+        #modal-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: #aaa;
+            line-height: 1;
+        }
+ 
+        .form-group { margin-bottom: 14px; }
+ 
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 5px;
+        }
+ 
+        .form-label .required { color: #c0392b; margin-left: 2px; }
+ 
+        .form-control {
+            width: 100%;
+            padding: 8px 11px;
+            border: 1px solid #ddd;
+            border-radius: 7px;
+            font-size: 13px;
+            font-family: inherit;
+            background: #fafaf8;
+            color: #2c2c2a;
+            outline: none;
+            transition: border-color .15s;
+        }
+ 
+        .form-control:focus { border-color: #555; }
+ 
+        textarea.form-control { resize: vertical; min-height: 80px; }
+ 
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+ 
+        .form-hint { font-size: 10px; color: #aaa; margin-top: 4px; }
+ 
+        .upload-zone {
+            border: 1.5px dashed #ccc;
+            border-radius: 8px;
+            padding: 18px;
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            cursor: pointer;
+        }
+ 
+        .form-notice {
+            background: #fff8ec;
+            border: 1px solid #f5d97a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #7a5500;
+            margin-bottom: 14px;
+        }
+ 
+        #btn-submit {
+            width: 100%;
+            padding: 11px;
+            background: #2c2c2a;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .15s;
+        }
+ 
+        #btn-submit:hover { background: #444; }
+ 
+        /* ── Custom Leaflet marker ─────────────────────────────────── */
+        .custom-marker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+ 
+        .marker-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2.5px solid #fff;
+            box-shadow: 0 1px 5px rgba(0,0,0,.35);
+            transition: transform .15s;
+        }
+ 
+        .marker-dot:hover { transform: scale(1.3); }
+ 
+        .marker-stem {
+            width: 2px;
+            height: 8px;
+        }
+    </style>
+</head>
+<body>
+ 
+<!-- ══════════════════════════════════════════════════════
+     TOP BAR
+════════════════════════════════════════════════════════ -->
+<header id="topbar">
+    <h1 data-i18n="app_title">Memory Map Archive — Antiracist History</h1>
+    <div id="lang-toggle">
+        <button class="active" onclick="setLang('en')">EN</button>
+        <button onclick="setLang('es')">ES</button>
+    </div>
+</header>
+ 
+<!-- ══════════════════════════════════════════════════════
+     MAIN LAYOUT  (filters | map | detail)
+════════════════════════════════════════════════════════ -->
+<div id="app">
+ 
+    <!-- ── LEFT SIDEBAR: FILTERS ─────────────────────────── -->
+    <aside id="sidebar-filters">
+ 
+        <div class="sb-section">
+            <div class="sb-label" data-i18n="search">Search</div>
+            <input id="search-input" type="text" data-i18n-placeholder="search_placeholder"
+                   placeholder="Search by title, city, year…" oninput="applyFilters()" />
+        </div>
+ 
+        <div class="sb-section">
+            <div class="sb-label" data-i18n="categories">Categories</div>
+            <div id="category-list">
+                <!-- Pills are injected by JS from CATEGORIES constant -->
+            </div>
+        </div>
+ 
+        <div class="sb-section">
+            <div class="sb-label" data-i18n="time_range">Time range</div>
+            <div class="year-range-labels">
+                <span>1983</span><span>2024</span>
+            </div>
+            <input id="year-slider" type="range" min="1983" max="2024" value="2024"
+                   step="1" oninput="onSliderMove(this.value)" />
+            <div id="year-display">Up to: 2024</div>
+        </div>
+ 
+        <div class="sb-section">
+            <div class="toggle-row">
+                <span data-i18n="verified_only">Verified only</span>
+                <input type="checkbox" id="verified-toggle" onchange="applyFilters()" />
+            </div>
+        </div>
+ 
+        <div id="results-count"></div>
+ 
+        <div style="flex:1"></div>
+ 
+        <button id="btn-collaborate" onclick="openModal()" data-i18n="collaborate_btn">
+            + Contribute an incident
+        </button>
+ 
+    </aside>
+ 
+    <!-- ── MAP ───────────────────────────────────────────── -->
+    <main id="map"></main>
+ 
+    <!-- ── RIGHT SIDEBAR: INCIDENT DETAIL ────────────────── -->
+    <aside id="sidebar-detail">
+ 
+        <div id="detail-empty">
+            <div class="icon">📍</div>
+            <span data-i18n="select_pin">Select a pin on the map to read more</span>
+        </div>
+ 
+        <div id="detail-content">
+            <div id="detail-img">
+                <span data-i18n="no_image">No image available</span>
+            </div>
+            <div class="detail-header">
+                <div id="detail-cat-badge" class="detail-cat-badge"></div>
+                <div id="detail-title"></div>
+                <div id="detail-meta"></div>
+                <div id="detail-verified"></div>
+            </div>
+            <div class="detail-body">
+                <p id="detail-desc"></p>
+                <div class="detail-tags" id="detail-tags"></div>
+            </div>
+            <div class="detail-sources" id="detail-sources"></div>
+            <button id="btn-share" onclick="shareIncident()" data-i18n="share">Share this incident</button>
+        </div>
+ 
+    </aside>
+</div>
+ 
+<!-- ══════════════════════════════════════════════════════
+     COLLABORATION MODAL
+════════════════════════════════════════════════════════ -->
+<div id="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div id="modal">
+        <div class="modal-header">
+            <h2 data-i18n="modal_title">Contribute a new incident</h2>
+            <button id="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+        </div>
+ 
+        <form id="collab-form" onsubmit="submitForm(event)">
+ 
+            <!-- Incident.title_es  (user always writes in Spanish first) -->
+            <div class="form-group">
+                <label class="form-label" data-i18n="field_title">
+                    Title <span class="required">*</span>
+                </label>
+                <input class="form-control" type="text" name="title_es" required
+                       data-i18n-placeholder="field_title_ph" placeholder="Name of the event or case" />
+            </div>
+ 
+            <!-- Incident.description_es -->
+            <div class="form-group">
+                <label class="form-label" data-i18n="field_description">
+                    Description <span class="required">*</span>
+                </label>
+                <textarea class="form-control" name="description_es" required
+                          data-i18n-placeholder="field_desc_ph"
+                          placeholder="Describe the incident with historical and journalistic context…"></textarea>
+            </div>
+ 
+            <div class="form-grid">
+                <!-- Incident.date_occurred -->
+                <div class="form-group">
+                    <label class="form-label" data-i18n="field_date">
+                        Date <span class="required">*</span>
+                    </label>
+                    <input class="form-control" type="date" name="date_occurred" required />
+                </div>
+                <!-- Incident.category  (FK id) -->
+                <div class="form-group">
+                    <label class="form-label" data-i18n="field_category">
+                        Category <span class="required">*</span>
+                    </label>
+                    <select class="form-control" name="category" id="modal-category" required>
+                        <!-- populated by buildCategoryPills() -->
+                    </select>
+                </div>
+            </div>
+ 
+            <!-- Incident.location_label + Incident.latitude / Incident.longitude -->
+            <div class="form-group">
+                <label class="form-label" data-i18n="field_location">
+                    Location <span class="required">*</span>
+                </label>
+                <input class="form-control" type="text" name="location_label" required
+                       data-i18n-placeholder="field_loc_ph" placeholder="City, Province" />
+                <!-- Hidden inputs filled when the user clicks the map -->
+                <input type="hidden" name="latitude"  id="form-lat" />
+                <input type="hidden" name="longitude" id="form-lng" />
+                <div class="form-hint" data-i18n="field_loc_hint">
+                    Or click on the map to drop a pin at the exact location.
+                </div>
+            </div>
+ 
+            <!-- IncidentSource.url + IncidentSource.label (first source) -->
+            <div class="form-group">
+                <label class="form-label" data-i18n="field_source">
+                    Journalistic sources <span class="required">*</span>
+                </label>
+                <input class="form-control" type="url" name="source_url" required
+                       data-i18n-placeholder="field_source_ph" placeholder="https://…" />
+                <input class="form-control" type="text" name="source_label"
+                       placeholder="Label, e.g. Clarín — 12 mar 1997" style="margin-top:6px" />
+                <div class="form-hint" data-i18n="field_source_hint">
+                    At least one verifiable source is required.
+                </div>
+            </div>
+ 
+            <!-- IncidentImage.image -->
+            <div class="form-group">
+                <label class="form-label" data-i18n="field_image">Image (optional)</label>
+                <div class="upload-zone" data-i18n="upload_hint">
+                    Drag an image here or click to upload
+                </div>
+            </div>
+ 
+            <!-- Incident.contributor_name + Incident.contributor_email -->
+            <div class="form-group">
+                <label class="form-label" data-i18n="field_contributor">Your details</label>
+                <input class="form-control" type="text" name="contributor_name"
+                       data-i18n-placeholder="field_name_ph" placeholder="Your name or alias"
+                       style="margin-bottom:8px" />
+                <input class="form-control" type="email" name="contributor_email"
+                       data-i18n-placeholder="field_email_ph"
+                       placeholder="Contact email (not published)" />
+            </div>
+ 
+            <div class="form-notice" data-i18n="moderation_notice">
+                ⚠ Your contribution will be reviewed by the editorial team before publication.
+            </div>
+ 
+            <button type="submit" id="btn-submit" data-i18n="submit_btn">
+                Send for review
+            </button>
+ 
+        </form>
+    </div>
+</div>
+ 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+ 
+<script>
+/* ═══════════════════════════════════════════════════════════
+   i18n — bilingual string table
+═══════════════════════════════════════════════════════════ */
+const STRINGS = {
+    en: {
+        app_title:         "Memory Map Archive — Antiracist History",
+        search:            "Search",
+        search_placeholder:"Search by title, city, year…",
+        categories:        "Categories",
+        time_range:        "Time range",
+        up_to:             "Up to:",
+        verified_only:     "Verified only",
+        collaborate_btn:   "+ Contribute an incident",
+        select_pin:        "Select a pin on the map to read more",
+        no_image:          "No image available",
+        share:             "Share this incident",
+        modal_title:       "Contribute a new incident",
+        field_title:       "Title",
+        field_title_ph:    "Name of the event or case",
+        field_description: "Description",
+        field_desc_ph:     "Describe the incident with historical and journalistic context…",
+        field_date:        "Date",
+        field_category:    "Category",
+        field_location:    "Location",
+        field_loc_ph:      "City, Province",
+        field_loc_hint:    "Or click on the map to drop a pin at the exact location.",
+        field_source:      "Journalistic sources",
+        field_source_ph:   "https://…",
+        field_source_hint: "At least one verifiable source is required.",
+        field_image:       "Image (optional)",
+        upload_hint:       "Drag an image here or click to upload",
+        field_contributor: "Your details",
+        field_name_ph:     "Your name or alias",
+        field_email_ph:    "Contact email (not published)",
+        moderation_notice: "⚠ Your contribution will be reviewed by the editorial team before publication.",
+        submit_btn:        "Send for review",
+        results:           "incidents shown",
+        verified_badge:    "✓ Verified",
+        pending_badge:     "⏳ Pending review",
+    },
+    es: {
+        app_title:         "Cartografía de la memoria antirracista",
+        search:            "Búsqueda",
+        search_placeholder:"Buscar por título, ciudad, año…",
+        categories:        "Categorías",
+        time_range:        "Rango temporal",
+        up_to:             "Hasta:",
+        verified_only:     "Solo verificados",
+        collaborate_btn:   "+ Colaborar con un hito",
+        select_pin:        "Seleccioná un punto en el mapa para leer más",
+        no_image:          "Sin imagen disponible",
+        share:             "Compartir este hito",
+        modal_title:       "Colaborar con un nuevo hito",
+        field_title:       "Título",
+        field_title_ph:    "Nombre del evento o caso",
+        field_description: "Descripción",
+        field_desc_ph:     "Describí el hecho con contexto histórico y periodístico…",
+        field_date:        "Fecha",
+        field_category:    "Categoría",
+        field_location:    "Ubicación",
+        field_loc_ph:      "Ciudad, Provincia",
+        field_loc_hint:    "O hacé clic en el mapa para marcar el punto exacto.",
+        field_source:      "Fuentes periodísticas",
+        field_source_ph:   "https://…",
+        field_source_hint: "Se requiere al menos una fuente verificable.",
+        field_image:       "Imágenes (opcional)",
+        upload_hint:       "Arrastrá una imagen o hacé clic para subir",
+        field_contributor: "Tus datos",
+        field_name_ph:     "Tu nombre o alias",
+        field_email_ph:    "Email de contacto (no se publica)",
+        moderation_notice: "⚠ Tu contribución será revisada por el equipo editorial antes de publicarse.",
+        submit_btn:        "Enviar para revisión",
+        results:           "hitos visibles",
+        verified_badge:    "✓ Verificado",
+        pending_badge:     "⏳ Pendiente de revisión",
+    }
+};
+ 
+let currentLang = 'en';
+ 
+function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('#lang-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === lang.toUpperCase());
+    });
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (STRINGS[lang][key]) el.textContent = STRINGS[lang][key];
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
+        if (STRINGS[lang][key]) el.placeholder = STRINGS[lang][key];
+    });
+    updateYearDisplay(document.getElementById('year-slider').value);
+    updateResultsCount();
+}
+ 
+/* ═══════════════════════════════════════════════════════════
+   CATEGORIES — single source of truth
+   (In the Django version these come from the DB via template tag)
+═══════════════════════════════════════════════════════════ */
+const CATEGORIES = [
+    { id: 1, name_en: "Police violence",       name_es: "Violencia policial",      color: "#1D9E75", bg: "#E1F5EE" },
+    { id: 2, name_en: "Labor discrimination",  name_es: "Discriminación laboral",   color: "#534AB7", bg: "#EEEDFE" },
+    { id: 3, name_en: "Hate crime",            name_es: "Crimen de odio",           color: "#D85A30", bg: "#FAECE7" },
+    { id: 4, name_en: "Hate speech",           name_es: "Discurso de odio",         color: "#BA7517", bg: "#FAEEDA" },
+    { id: 5, name_en: "Legal case",            name_es: "Caso judicial",            color: "#378ADD", bg: "#E6F1FB" },
+    { id: 6, name_en: "Activism",              name_es: "Activismo",                color: "#639922", bg: "#EAF3DE" },
+];
+ 
+/* ═══════════════════════════════════════════════════════════
+   SAMPLE DATA
+   Keys mirror model field names exactly so the Django template
+   injection is a 1-to-1 replacement:
+ 
+       const INCIDENTS = [
+         {% for i in incidents %}
+         {
+           id:             {{ i.id }},
+           category_id:    {{ i.category_id }},          // FK → Category.id
+           status:         "{{ i.status }}",              // 'approved' | 'pending' | 'rejected'
+           title_es:       "{{ i.title_es|escapejs }}",
+           title_en:       "{{ i.title_en|escapejs }}",
+           description_es: "{{ i.description_es|escapejs }}",
+           description_en: "{{ i.description_en|escapejs }}",
+           location_label: "{{ i.location_label|escapejs }}",
+           latitude:       {{ i.latitude }},
+           longitude:      {{ i.longitude }},
+           date_occurred:  "{{ i.date_occurred|date:'Y-m-d' }}",
+           year:           {{ i.date_occurred.year }},
+           cover_image:    {% if i.images.first %}"{{ i.images.first.image.url }}"{% else %}null{% endif %},
+           sources:        [{% for s in i.sources.all %}{ label:"{{ s.label|escapejs }}", url:"{{ s.url|escapejs }}" },{% endfor %}],
+         },
+         {% endfor %}
+       ];
+═══════════════════════════════════════════════════════════ */
+const INCIDENTS = [
+    {
+        id: 1,
+        category_id:    1,
+        status:         "approved",          // Incident.status
+        title_es:       "Caso Cabezas — Buenos Aires",
+        title_en:       "Cabezas Case — Buenos Aires",
+        description_es: "Asesinato del fotógrafo José Luis Cabezas en Pinamar (1997). El caso expuso nexos entre policía, crimen organizado y poder político.",
+        description_en: "Murder of photojournalist José Luis Cabezas in Pinamar (1997). The case exposed links between the police, organized crime, and political power.",
+        location_label: "Pinamar, Buenos Aires",  // Incident.location_label
+        latitude:  -37.1078,                       // Incident.latitude
+        longitude: -56.8573,                       // Incident.longitude
+        date_occurred: "1997-01-25",               // Incident.date_occurred
+        year: 1997,
+        cover_image: null,                         // IncidentImage (first, order=0)
+        sources: [{ label: "CELS report", url: "https://www.cels.org.ar" }],
+    },
+    {
+        id: 2,
+        category_id:    3,
+        status:         "approved",
+        title_es:       "Miguel Ángel Benítez — Rosario",
+        title_en:       "Miguel Ángel Benitez — Rosario",
+        description_es: "Hombre afroargentino atacado en la vía pública por discriminación racial. El caso llegó a juicio en 2003.",
+        description_en: "Afro-Argentine man attacked in the street due to racial profiling. Case brought to court in 2003.",
+        location_label: "Rosario, Santa Fe",
+        latitude:  -32.9468,
+        longitude: -60.6393,
+        date_occurred: "2003-06-01",
+        year: 2003,
+        cover_image: null,
+        sources: [{ label: "INADI records", url: "https://www.argentina.gob.ar/inadi" }],
+    },
+    {
+        id: 3,
+        category_id:    2,
+        status:         "approved",
+        title_es:       "Discriminación racial en el subte porteño",
+        title_en:       "Racial discrimination — Buenos Aires subway",
+        description_es: "Serie de casos documentados de discriminación laboral contra empleadas de origen africano y afrodescendiente en la red de subtes porteños.",
+        description_en: "Series of documented cases of labor discrimination against employees of African and Afro-descendant origin in the Buenos Aires metro network.",
+        location_label: "Buenos Aires",
+        latitude:  -34.6037,
+        longitude: -58.3816,
+        date_occurred: "2010-03-15",
+        year: 2010,
+        cover_image: null,
+        sources: [{ label: "Diario Clarín", url: "https://www.clarin.com" }],
+    },
+    {
+        id: 4,
+        category_id:    5,
+        status:         "pending",           // shows ⏳ badge — tests the moderation flow
+        title_es:       "Fallo: caso Yamila Álvarez",
+        title_en:       "Verdict: Yamila Alvarez case",
+        description_es: "Fallo judicial que reconoce la discriminación racial como agravante en un caso de acoso laboral en Córdoba.",
+        description_en: "Landmark court ruling recognizing racial discrimination as an aggravating factor in a workplace harassment case in Córdoba.",
+        location_label: "Córdoba",
+        latitude:  -31.4201,
+        longitude: -64.1888,
+        date_occurred: "2018-09-20",
+        year: 2018,
+        cover_image: null,
+        sources: [{ label: "La Voz del Interior", url: "https://www.lavoz.com.ar" }],
+    },
+    {
+        id: 5,
+        category_id:    6,
+        status:         "approved",
+        title_es:       "Marcha del Movimiento Xangô — Buenos Aires",
+        title_en:       "Movimiento Xangô march — Buenos Aires",
+        description_es: "Gran movilización de comunidades afroargentinas y afrodescendientes exigiendo reconocimiento en el censo nacional y fin al racismo institucional.",
+        description_en: "Major demonstration by Afro-Argentine and Afro-descendant communities demanding recognition in the national census and an end to institutional racism.",
+        location_label: "Buenos Aires",
+        latitude:  -34.6158,
+        longitude: -58.3832,
+        date_occurred: "2015-11-08",
+        year: 2015,
+        cover_image: null,
+        sources: [{ label: "Infobae", url: "https://www.infobae.com" }],
+    },
+];
+ 
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+const state = {
+    activeCats: new Set(CATEGORIES.map(c => c.id)),
+    maxYear:    2024,
+    verifiedOnly: false,
+    searchQuery: "",
+};
+ 
+/* ═══════════════════════════════════════════════════════════
+   MAP SETUP
+═══════════════════════════════════════════════════════════ */
+const map = L.map('map').setView([-38.4, -63.6], 4);
+ 
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+    maxZoom: 18,
+}).addTo(map);
+ 
+/* Custom icon factory — returns a Leaflet DivIcon with the category color */
+function makeIcon(color) {
+    return L.divIcon({
+        className: '',
+        html: `<div class="custom-marker">
+                 <div class="marker-dot" style="background:${color}"></div>
+                 <div class="marker-stem" style="background:${color}"></div>
+               </div>`,
+        iconSize: [14, 22],
+        iconAnchor: [7, 22],
+        popupAnchor: [0, -24],
+    });
+}
+ 
+/* Build marker objects — each entry holds the Leaflet marker + incident data */
+const markerObjects = INCIDENTS.map(incident => {
+    const cat = CATEGORIES.find(c => c.id === incident.category_id);
+    const lMarker = L.marker([incident.latitude, incident.longitude], { icon: makeIcon(cat.color) });
+    lMarker.on('click', () => openDetail(incident));
+    lMarker.addTo(map);
+    return { marker: lMarker, incident };
+});
+ 
+/* ═══════════════════════════════════════════════════════════
+   FILTER ENGINE
+   All filters funneled through a single applyFilters() call
+═══════════════════════════════════════════════════════════ */
+function applyFilters() {
+    state.searchQuery  = document.getElementById('search-input').value.toLowerCase();
+    state.verifiedOnly = document.getElementById('verified-toggle').checked;
+ 
+    let visible = 0;
+    markerObjects.forEach(({ marker, incident }) => {
+        const catMatch      = state.activeCats.has(incident.category_id);
+        const yearMatch     = incident.year <= state.maxYear;
+        // Incident.status === 'approved' maps to the "verified" concept in the UI
+        const verifiedMatch = !state.verifiedOnly || incident.status === 'approved';
+        const query         = state.searchQuery;
+        const searchMatch   = !query ||
+            incident.title_en.toLowerCase().includes(query) ||
+            incident.title_es.toLowerCase().includes(query) ||
+            incident.location_label.toLowerCase().includes(query) ||  // Incident.location_label
+            String(incident.year).includes(query);
+ 
+        const show = catMatch && yearMatch && verifiedMatch && searchMatch;
+        if (show) { map.addLayer(marker); visible++; }
+        else       { map.removeLayer(marker); }
+    });
+    updateResultsCount(visible);
+}
+ 
+function updateResultsCount(n) {
+    const total = n !== undefined ? n : markerObjects.length;
+    document.getElementById('results-count').textContent =
+        `${total} ${STRINGS[currentLang].results}`;
+}
+ 
+/* Year slider */
+function onSliderMove(value) {
+    state.maxYear = parseInt(value, 10);
+    updateYearDisplay(value);
+    applyFilters();
+}
+ 
+function updateYearDisplay(value) {
+    document.getElementById('year-display').textContent =
+        `${STRINGS[currentLang].up_to} ${value}`;
+}
+ 
+/* ═══════════════════════════════════════════════════════════
+   CATEGORY PILLS  (rendered from CATEGORIES array)
+═══════════════════════════════════════════════════════════ */
+function buildCategoryPills() {
+    const container = document.getElementById('category-list');
+    const select    = document.getElementById('modal-category');
+    container.innerHTML = '';
+    select.innerHTML    = '';
+ 
+    CATEGORIES.forEach(cat => {
+        const name = currentLang === 'es' ? cat.name_es : cat.name_en;
+ 
+        /* sidebar pill */
+        const pill = document.createElement('span');
+        pill.className = 'cat-pill';
+        pill.dataset.catId = cat.id;
+        pill.style.background = cat.bg;
+        pill.style.color       = cat.color;
+        pill.style.borderColor = cat.color;
+        pill.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${name}`;
+        pill.onclick = () => toggleCategory(cat.id, pill);
+        container.appendChild(pill);
+ 
+        /* modal select option */
+        const opt = document.createElement('option');
+        opt.value       = cat.id;
+        opt.textContent = name;
+        select.appendChild(opt);
+    });
+}
+ 
+function toggleCategory(catId, pill) {
+    if (state.activeCats.has(catId)) {
+        state.activeCats.delete(catId);
+        pill.classList.add('inactive');
+    } else {
+        state.activeCats.add(catId);
+        pill.classList.remove('inactive');
+    }
+    applyFilters();
+}
+ 
+/* ═══════════════════════════════════════════════════════════
+   RIGHT SIDEBAR — incident detail
+═══════════════════════════════════════════════════════════ */
+function openDetail(incident) {
+    const cat     = CATEGORIES.find(c => c.id === incident.category_id);
+    const lang    = currentLang;
+    const title   = lang === 'es' ? incident.title_es       : incident.title_en;
+    const desc    = lang === 'es' ? incident.description_es  : incident.description_en;  // Incident.description_es / description_en
+    const catName = lang === 'es' ? cat.name_es              : cat.name_en;
+ 
+    /* category badge */
+    const badge = document.getElementById('detail-cat-badge');
+    badge.innerHTML        = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
+    badge.style.background = cat.bg;
+    badge.style.color      = cat.color;
+ 
+    document.getElementById('detail-title').textContent = title;
+    // Incident.location_label + Incident.date_occurred year
+    document.getElementById('detail-meta').textContent  = `${incident.year} · ${incident.location_label}`;
+ 
+    /* status badge — maps Incident.status to UI labels */
+    const vBadge = document.getElementById('detail-verified');
+    if (incident.status === 'approved') {
+        vBadge.textContent = STRINGS[lang].verified_badge;
+        vBadge.className   = 'detail-verified yes';
+    } else {
+        vBadge.textContent = STRINGS[lang].pending_badge;
+        vBadge.className   = 'detail-verified pending';
+    }
+ 
+    document.getElementById('detail-desc').textContent = desc;
+ 
+    /* tags — derived from category name + year (no separate model field) */
+    const tagsEl = document.getElementById('detail-tags');
+    tagsEl.innerHTML = [catName, String(incident.year)]
+        .map(t => `<span class="detail-tag">${t}</span>`).join('');
+ 
+    /* cover image — IncidentImage (order=0) serialized as cover_image url */
+    const imgEl = document.getElementById('detail-img');
+    if (incident.cover_image) {
+        imgEl.innerHTML = `<img src="${incident.cover_image}" alt="${title}" />`;
+    } else {
+        imgEl.innerHTML = `<span>${STRINGS[lang].no_image}</span>`;
+    }
+ 
+    /* sources — IncidentSource related objects */
+    const sourcesEl = document.getElementById('detail-sources');
+    if (incident.sources && incident.sources.length) {
+        sourcesEl.innerHTML = `<div class="sb-label">Sources</div>` +
+            incident.sources.map(s =>
+                `<a href="${s.url}" target="_blank" rel="noopener">→ ${s.label}</a>`
+            ).join('');
+    } else {
+        sourcesEl.innerHTML = '';
+    }
+ 
+    document.getElementById('detail-empty').style.display = 'none';
+    document.getElementById('detail-content').classList.add('visible');
+}
+ 
+function shareIncident() {
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: document.title, url });
+    } else {
+        navigator.clipboard.writeText(url).then(() => alert('Link copied!'));
+    }
+}
+ 
+/* ═══════════════════════════════════════════════════════════
+   MAP CLICK — fill hidden latitude/longitude inputs in the form
+   (Incident.latitude and Incident.longitude)
+═══════════════════════════════════════════════════════════ */
+let formPinMarker = null;
+ 
+map.on('click', function (e) {
+    const latInput = document.getElementById('form-lat');
+    const lngInput = document.getElementById('form-lng');
+    if (!latInput) return;                       // modal not yet in DOM (shouldn't happen)
+ 
+    latInput.value = e.latlng.lat.toFixed(6);    // → Incident.latitude
+    lngInput.value = e.latlng.lng.toFixed(6);    // → Incident.longitude
+ 
+    /* show a temporary marker so the user sees where they clicked */
+    if (formPinMarker) map.removeLayer(formPinMarker);
+    formPinMarker = L.circleMarker(e.latlng, {
+        radius: 8, color: '#2c2c2a', fillColor: '#fff', fillOpacity: 1, weight: 2,
+    }).addTo(map).bindPopup('📍 Pin for new incident').openPopup();
+});
+ 
+/* ═══════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════ */
+function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    // remove temporary pin if user didn't submit
+    if (formPinMarker) { map.removeLayer(formPinMarker); formPinMarker = null; }
+}
+ 
+function closeModalOnOverlay(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+ 
+function submitForm(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    /*
+       POST payload keys match model fields exactly — Django view does:
+           Incident.objects.create(
+               title_es        = data['title_es'],
+               description_es  = data['description_es'],
+               date_occurred   = data['date_occurred'],
+               category_id     = data['category'],
+               location_label  = data['location_label'],
+               latitude        = data['latitude'],
+               longitude       = data['longitude'],
+               contributor_name  = data['contributor_name'],
+               contributor_email = data['contributor_email'],
+               status = Incident.PENDING,
+           )
+           IncidentSource.objects.create(
+               incident = incident,
+               url      = data['source_url'],
+               label    = data['source_label'],
+           )
+    */
+    alert(currentLang === 'es'
+        ? '¡Gracias! Tu contribución fue enviada para revisión editorial.'
+        : 'Thank you! Your contribution has been sent for editorial review.');
+    closeModal();
+    e.target.reset();
+}
+ 
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+buildCategoryPills();
+updateResultsCount(INCIDENTS.length);
+updateYearDisplay(2024);
+</script>
+</body>
+</html>
+ 

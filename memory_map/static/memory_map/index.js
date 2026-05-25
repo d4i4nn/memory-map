@@ -1,10 +1,17 @@
 let allMarkers = []; // Pines saved
-const incidents = JSON.parse(document.getElementById('incidents-data').textContent);
+const incidentsDataElement = document.getElementById('incidents-data');
+const incidents = incidentsDataElement ? JSON.parse(incidentsDataElement.textContent) : [];
+
+
+/**
+ * Dibuja los marcadores en el mapa aplicando el filtro seleccionado
+ * @param {string} filterId - El ID de la categoría a filtrar o 'all'
+ */
 
 function displayMarkers(filterId) {
     console.log("Iniciando displayMarkers con filtro:", filterId);
 
-    allMarkers.forEach(m => map.removeLayer(m));
+    allMarkers.forEach(marker => map.removeLayer(marker));
     allMarkers = [];
 
     incidents.forEach(incident => {
@@ -26,8 +33,8 @@ function displayMarkers(filterId) {
 }
 
 function filterMarkers() {
-    const selected = document.getElementById('category-filter').value;
-    displayMarkers(selected);
+    const selectedCategory = document.getElementById('category-filter').value;
+    displayMarkers(selectedCategory);
 }
 
 displayMarkers('all');
