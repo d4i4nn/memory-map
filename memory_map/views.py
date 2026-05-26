@@ -18,3 +18,8 @@ def index(request):
         "incidents": incidents_list,
         "categories": categories
     })
+
+def incident(request):
+    return render(request, "memory_map/incidents/<id>/", {
+        "incidents": incident_list
+    })
