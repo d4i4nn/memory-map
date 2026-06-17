@@ -553,25 +553,23 @@
             <button id="modal-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
  
-        <form id="collab-form" onsubmit="submitForm(event)">
+        <form id="collab-form" action="/contribute/" method="POST" onsubmit="submitForm(event)">
+            {% csrf_token %}
  
             <!-- Incident.title_es  (user always writes in Spanish first) -->
             <div class="form-group">
                 <label class="form-label" data-i18n="field_title">
                     Title <span class="required">*</span>
+                    <input type="text" class="form-control" name="title_es" required>
                 </label>
-                <input class="form-control" type="text" name="title_es" required
-                       data-i18n-placeholder="field_title_ph" placeholder="Name of the event or case" />
             </div>
  
             <!-- Incident.description_es -->
             <div class="form-group">
                 <label class="form-label" data-i18n="field_description">
                     Description <span class="required">*</span>
+                    <textarea class="form-control" name="description_es" required></textarea>
                 </label>
-                <textarea class="form-control" name="description_es" required
-                          data-i18n-placeholder="field_desc_ph"
-                          placeholder="Describe the incident with historical and journalistic context…"></textarea>
             </div>
  
             <div class="form-grid">
@@ -579,17 +577,17 @@
                 <div class="form-group">
                     <label class="form-label" data-i18n="field_date">
                         Date <span class="required">*</span>
+                        <input class="form-control" type="date" name="date_occurred" required />
                     </label>
-                    <input class="form-control" type="date" name="date_occurred" required />
                 </div>
                 <!-- Incident.category  (FK id) -->
                 <div class="form-group">
                     <label class="form-label" data-i18n="field_category">
                         Category <span class="required">*</span>
+                        <select class="form-control" name="category" id="modal-category" required>
+                            <!-- populated by buildCategoryPills() -->
+                        </select>
                     </label>
-                    <select class="form-control" name="category" id="modal-category" required>
-                        <!-- populated by buildCategoryPills() -->
-                    </select>
                 </div>
             </div>
  
@@ -597,48 +595,53 @@
             <div class="form-group">
                 <label class="form-label" data-i18n="field_location">
                     Location <span class="required">*</span>
+                    <input class="form-control" type="text" name="location_label" required
+                           data-i18n-placeholder="field_loc_ph" placeholder="City, Province" />
+                    <!-- Hidden inputs filled when the user clicks the map -->
+                    <input type="hidden" name="latitude"  id="form-lat" />
+                    <input type="hidden" name="longitude" id="form-lng" />
+                    <div class="form-hint" data-i18n="field_loc_hint">
+                        Or click on the map to drop a pin at the exact location.
+                    </div>
                 </label>
-                <input class="form-control" type="text" name="location_label" required
-                       data-i18n-placeholder="field_loc_ph" placeholder="City, Province" />
-                <!-- Hidden inputs filled when the user clicks the map -->
-                <input type="hidden" name="latitude"  id="form-lat" />
-                <input type="hidden" name="longitude" id="form-lng" />
-                <div class="form-hint" data-i18n="field_loc_hint">
-                    Or click on the map to drop a pin at the exact location.
-                </div>
             </div>
  
             <!-- IncidentSource.url + IncidentSource.label (first source) -->
             <div class="form-group">
                 <label class="form-label" data-i18n="field_source">
                     Journalistic sources <span class="required">*</span>
+                    <input class="form-control" type="url" name="source_url" required
+                           data-i18n-placeholder="field_source_ph" placeholder="https://…" />
+                    <input class="form-control" type="text" name="source_label"
+                           placeholder="Label, e.g. Clarín — 12 mar 1997" style="margin-top:6px" />
+                    <div class="form-hint" data-i18n="field_source_hint">
+                        At least one verifiable source is required.
+                    </div>
                 </label>
-                <input class="form-control" type="url" name="source_url" required
-                       data-i18n-placeholder="field_source_ph" placeholder="https://…" />
-                <input class="form-control" type="text" name="source_label"
-                       placeholder="Label, e.g. Clarín — 12 mar 1997" style="margin-top:6px" />
-                <div class="form-hint" data-i18n="field_source_hint">
-                    At least one verifiable source is required.
-                </div>
             </div>
  
             <!-- IncidentImage.image -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_image">Image (optional)</label>
-                <div class="upload-zone" data-i18n="upload_hint">
-                    Drag an image here or click to upload
+                <label class="form-label" data-i18n="field_image">Image (optional)                </label>
+
+                <div class="upload-zone" onclick="document.getElementById('image-upload').click()">
+                </div> 
+                    <span data-i18n="upload_hint">
+                    Drag an image here or click to upload</span>
+                    <input type="file" id="incident-image-upload" name="image" accept="image/*" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
                 </div>
             </div>
  
             <!-- Incident.contributor_name + Incident.contributor_email -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_contributor">Your details</label>
+                <label class="form-label" data-i18n="field_contributor">Your details
                 <input class="form-control" type="text" name="contributor_name"
                        data-i18n-placeholder="field_name_ph" placeholder="Your name or alias"
                        style="margin-bottom:8px" />
                 <input class="form-control" type="email" name="contributor_email"
                        data-i18n-placeholder="field_email_ph"
                        placeholder="Contact email (not published)" />
+                </label>
             </div>
  
             <div class="form-notice" data-i18n="moderation_notice">
@@ -793,88 +796,7 @@ const CATEGORIES = [
          {% endfor %}
        ];
 ═══════════════════════════════════════════════════════════ */
-const INCIDENTS = [
-    {
-        id: 1,
-        category_id:    1,
-        status:         "approved",          // Incident.status
-        title_es:       "Caso Cabezas — Buenos Aires",
-        title_en:       "Cabezas Case — Buenos Aires",
-        description_es: "Asesinato del fotógrafo José Luis Cabezas en Pinamar (1997). El caso expuso nexos entre policía, crimen organizado y poder político.",
-        description_en: "Murder of photojournalist José Luis Cabezas in Pinamar (1997). The case exposed links between the police, organized crime, and political power.",
-        location_label: "Pinamar, Buenos Aires",  // Incident.location_label
-        latitude:  -37.1078,                       // Incident.latitude
-        longitude: -56.8573,                       // Incident.longitude
-        date_occurred: "1997-01-25",               // Incident.date_occurred
-        year: 1997,
-        cover_image: null,                         // IncidentImage (first, order=0)
-        sources: [{ label: "CELS report", url: "https://www.cels.org.ar" }],
-    },
-    {
-        id: 2,
-        category_id:    3,
-        status:         "approved",
-        title_es:       "Miguel Ángel Benítez — Rosario",
-        title_en:       "Miguel Ángel Benitez — Rosario",
-        description_es: "Hombre afroargentino atacado en la vía pública por discriminación racial. El caso llegó a juicio en 2003.",
-        description_en: "Afro-Argentine man attacked in the street due to racial profiling. Case brought to court in 2003.",
-        location_label: "Rosario, Santa Fe",
-        latitude:  -32.9468,
-        longitude: -60.6393,
-        date_occurred: "2003-06-01",
-        year: 2003,
-        cover_image: null,
-        sources: [{ label: "INADI records", url: "https://www.argentina.gob.ar/inadi" }],
-    },
-    {
-        id: 3,
-        category_id:    2,
-        status:         "approved",
-        title_es:       "Discriminación racial en el subte porteño",
-        title_en:       "Racial discrimination — Buenos Aires subway",
-        description_es: "Serie de casos documentados de discriminación laboral contra empleadas de origen africano y afrodescendiente en la red de subtes porteños.",
-        description_en: "Series of documented cases of labor discrimination against employees of African and Afro-descendant origin in the Buenos Aires metro network.",
-        location_label: "Buenos Aires",
-        latitude:  -34.6037,
-        longitude: -58.3816,
-        date_occurred: "2010-03-15",
-        year: 2010,
-        cover_image: null,
-        sources: [{ label: "Diario Clarín", url: "https://www.clarin.com" }],
-    },
-    {
-        id: 4,
-        category_id:    5,
-        status:         "pending",           // shows ⏳ badge — tests the moderation flow
-        title_es:       "Fallo: caso Yamila Álvarez",
-        title_en:       "Verdict: Yamila Alvarez case",
-        description_es: "Fallo judicial que reconoce la discriminación racial como agravante en un caso de acoso laboral en Córdoba.",
-        description_en: "Landmark court ruling recognizing racial discrimination as an aggravating factor in a workplace harassment case in Córdoba.",
-        location_label: "Córdoba",
-        latitude:  -31.4201,
-        longitude: -64.1888,
-        date_occurred: "2018-09-20",
-        year: 2018,
-        cover_image: null,
-        sources: [{ label: "La Voz del Interior", url: "https://www.lavoz.com.ar" }],
-    },
-    {
-        id: 5,
-        category_id:    6,
-        status:         "approved",
-        title_es:       "Marcha del Movimiento Xangô — Buenos Aires",
-        title_en:       "Movimiento Xangô march — Buenos Aires",
-        description_es: "Gran movilización de comunidades afroargentinas y afrodescendientes exigiendo reconocimiento en el censo nacional y fin al racismo institucional.",
-        description_en: "Major demonstration by Afro-Argentine and Afro-descendant communities demanding recognition in the national census and an end to institutional racism.",
-        location_label: "Buenos Aires",
-        latitude:  -34.6158,
-        longitude: -58.3832,
-        date_occurred: "2015-11-08",
-        year: 2015,
-        cover_image: null,
-        sources: [{ label: "Infobae", url: "https://www.infobae.com" }],
-    },
-];
+const INCIDENTS = [];
  
 /* ═══════════════════════════════════════════════════════════
    STATE

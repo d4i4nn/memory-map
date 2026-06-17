@@ -21,6 +21,6 @@ from memory_map import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.index, name='index'),
-    path('/incidents/<id>/', views.incident, name='incident'),
-    path('/incidents/<id>/', views.incident, name='incident')
+    path('contribute/', views.contribute, name='contribute'),
+    # path('/incidents/<id>/', views.incident, name='incident')
 ]
