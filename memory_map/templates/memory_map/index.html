@@ -622,13 +622,15 @@
  
             <!-- IncidentImage.image -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_image">Image (optional)                </label>
+                <label class="form-label" for="incident-image-upload" data-i18n="field_image">Image (optional)
+                </label>
 
-                <div class="upload-zone" onclick="document.getElementById('image-upload').click()">
-                </div> 
+                <div class="upload-zone" onclick="document.getElementById('incident-image-upload').click()"> 
                     <span data-i18n="upload_hint">
-                    Drag an image here or click to upload</span>
-                    <input type="file" id="incident-image-upload" name="image" accept="image/*" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+                    Drag an image here or click to upload
+                    </span>
+                    <input type="file" id="incident-image-upload" name="image" accept="image/*" 
+                    style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
                 </div>
             </div>
  
@@ -657,7 +659,13 @@
 </div>
  
 <!-- Leaflet JS -->
+
+{{ incidents|json_script:"incidents-data" }}
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="{% static 'memory_map/index.js' %}"></script>
+
  
 <script>
 /* ═══════════════════════════════════════════════════════════
@@ -796,14 +804,14 @@ const CATEGORIES = [
          {% endfor %}
        ];
 ═══════════════════════════════════════════════════════════ */
-const INCIDENTS = [];
+const INCIDENTS = JSON.parse(document.getElementById('incidents-data').textContent);
  
 /* ═══════════════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════════════ */
 const state = {
     activeCats: new Set(CATEGORIES.map(c => c.id)),
-    maxYear:    2024,
+    maxYear:    2026,
     verifiedOnly: false,
     searchQuery: "",
 };

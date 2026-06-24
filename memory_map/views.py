@@ -14,6 +14,7 @@ def index(request):
         'category_id',
         'category__name_es'
     ))
+    print(incidents_list);
     
     return render(request, "memory_map/index.html", {
         "incidents": incidents_list,
