@@ -34,7 +34,6 @@ function displayMarkers(filterId) {
             allMarkers.push(marker);
         }
     });
-    console.log('${allMarkers.length}')
 }
 
 //UI Eventt Handlers
@@ -81,39 +80,23 @@ function closeSidebar() {
 
 displayMarkers('all');
 
-function contribute() {
-
-  // Get form data
-  const postBody = document.querySelector('#collab-form');
-  const bodyContent = postBody.value;
-
-  // Send email via API
-  fetch('/contribute', {
-    method: 'POST',
-    body: JSON.stringify({
-      body: bodyContent
-    }),
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": getCookie('csrftoken')
-    }
-  })
-  console.log("here")
-  .then(async response => {
-    if (!response.ok){
-      const err = await response.json();
-      throw err;
-    }
-    return response.json();
-  })
-  .then(result => {
-    // Print result
-    postBody.value = '';
-    console.log("Success:", result);
-    load_posts('all-posts');
-  })
-  .catch(error => {
-    console.error("Error creating post:", error);
-    alert("Something went wrong");
-  });
+function submitForm(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    fetch('/contribute/', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+    })
+    .then(response => {
+        if (response.ok) {
+            alert('Thank you! Sent for review.');
+            closeModal();
+            e.target.reset();
+        } else {
+            alert('Something went wrong. Please try again.');
+        }
+    });
 }

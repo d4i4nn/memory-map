@@ -1041,35 +1041,7 @@ function closeModalOnOverlay(e) {
     if (e.target === document.getElementById('modal-overlay')) closeModal();
 }
  
-function submitForm(e) {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target));
-    /*
-       POST payload keys match model fields exactly — Django view does:
-           Incident.objects.create(
-               title_es        = data['title_es'],
-               description_es  = data['description_es'],
-               date_occurred   = data['date_occurred'],
-               category_id     = data['category'],
-               location_label  = data['location_label'],
-               latitude        = data['latitude'],
-               longitude       = data['longitude'],
-               contributor_name  = data['contributor_name'],
-               contributor_email = data['contributor_email'],
-               status = Incident.PENDING,
-           )
-           IncidentSource.objects.create(
-               incident = incident,
-               url      = data['source_url'],
-               label    = data['source_label'],
-           )
-    */
-    alert(currentLang === 'es'
-        ? '¡Gracias! Tu contribución fue enviada para revisión editorial.'
-        : 'Thank you! Your contribution has been sent for editorial review.');
-    closeModal();
-    e.target.reset();
-}
+
  
 /* ═══════════════════════════════════════════════════════════
    INIT
