@@ -27,8 +27,6 @@ def index(request):
         }
         for i in incidents
     ]
-
-    print(incidents_data);
     
     return render(request, "memory_map/index.html", {
         "incidents": incidents_data,
