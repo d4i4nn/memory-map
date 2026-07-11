@@ -67,8 +67,9 @@
  
     <!-- ── MAP ───────────────────────────────────────────── -->
     <main id="map"></main>
- 
-    <!-- ── RIGHT SIDEBAR: INCIDENT DETAIL ────────────────── -->
+
+    </script>
+        <!-- ── RIGHT SIDEBAR: INCIDENT DETAIL ────────────────── -->
     <aside id="sidebar-detail">
  
         <div id="detail-empty">
@@ -313,6 +314,8 @@ const STRINGS = {
 };
  
 let currentLang = 'en';
+let currentIncident = null;
+
  
 function setLang(lang) {
     currentLang = lang;
@@ -328,9 +331,12 @@ function setLang(lang) {
         if (STRINGS[lang][key]) el.placeholder = STRINGS[lang][key];
     });
     updateYearDisplay(document.getElementById('year-slider').value);
-    updateResultsCount();
+    // update results count using index.js variable
+    document.getElementById('results-count').textContent =
+        `${allMarkers.length} ${STRINGS[lang].results}`;
+    //re render side bar in new lang 
+    if (currentIncident) openDetail (currentIncident);
 }
- 
 
 /* ═══════════════════════════════════════════════════════════
    SAMPLE DATA
@@ -373,8 +379,13 @@ const state = {
 /* ═══════════════════════════════════════════════════════════
    MAP SETUP
 ═══════════════════════════════════════════════════════════ */
-const map = L.map('map').setView([-38.4, -63.6], 4);
- 
+const map = L.map('map', {
+    preferCanvas: true,
+    tap: false,
+    dragging: true,
+    clickTolerance: 3,
+}).setView([-38.4, -63.6], 4);
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
     maxZoom: 18,
@@ -403,25 +414,13 @@ function makeIcon(color) {
    FILTER ENGINE
    All filters funneled through a single applyFilters() call
 ═══════════════════════════════════════════════════════════ */
-function applyFilters() {{
-    const selectedCategory = document.getElementById('category-filter')?.value || 'all';
-    displayMarkers(selectedCategory);
-}
-
-function toggleCategory(catId, pill) {
-    if (state.activeCats.has(catId)) {
-        state.activeCats.delete(catId);
-        pill.classList.add('inactive');
-    } else {
-        state.activeCats.add(catId);
-        pill.classList.remove('inactive');
-    }
+function applyFilters() {
     displayMarkers('all');
 }
-}
+
  
 function updateResultsCount(n) {
-    const total = n !== undefined ? n : markerObjects.length;
+    const total = n !== undefined ? n : allMarkers.length;
     document.getElementById('results-count').textContent =
         `${total} ${STRINGS[currentLang].results}`;
 }
@@ -448,6 +447,7 @@ function buildCategoryPills() {
     select.innerHTML    = '';
  
     CATEGORIES.forEach(cat => {
+
         const name = currentLang === 'es' ? cat.name_es : cat.name_en;
  
         /* sidebar pill */
@@ -477,7 +477,7 @@ function toggleCategory(catId, pill) {
         state.activeCats.add(catId);
         pill.classList.remove('inactive');
     }
-    applyFilters();
+    displayMarkers('all');
 }
  
 /* ═══════════════════════════════════════════════════════════
@@ -501,9 +501,7 @@ function shareIncident() {
 function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
 function closeModal() {
     document.getElementById('modal-overlay').classList.remove('open');
-    // remove temporary pin if user didn't submit
-    if (formPinMarker) { map.removeLayer(formPinMarker); formPinMarker = null; }
-}
+    }
  
 function closeModalOnOverlay(e) {
     if (e.target === document.getElementById('modal-overlay')) closeModal();

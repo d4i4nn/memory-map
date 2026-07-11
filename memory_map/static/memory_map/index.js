@@ -1,6 +1,7 @@
 // ==========================================
 // 1. GLOBAL STATE & INITIALIZATION
 // ==========================================
+console.log("map object:", map);
 
 // Array to track active, approved incident markers currently displayed on the map
 let allMarkers = [];
@@ -17,7 +18,6 @@ const incidents = incidentsDataElement ? JSON.parse(incidentsDataElement.textCon
  * @param {string} pinColor - The primary color for the center dot/border
  */
 function createColoredIcon(pinColor) {
-    console.log("color")
     return L.divIcon({
         className: 'cat-pill',
         html: `<div style="
@@ -56,6 +56,12 @@ function displayMarkers(filterId) {
 
         // Editorial Guard: Only render points authorized by the review state
         if (incident.status !== 'approved') return;
+        
+        if (typeof state !== 'undefined' && incident.year > state.maxYear) return;
+
+        // use state.activeCats from inline script
+        if (typeof state !== 'undefined' && !state.activeCats.has(incident.category_id)) return;
+
 
         // Category Guard: Filter records based on selected dropdown options
         if (filterId !== 'all' && incident.category_id.toString() !== filterId) return;
@@ -93,55 +99,44 @@ function filterCategory() {
 // ==========================================
 // 3. INTERACTIVE MAP CLICK (NEW CONTRIBUTIONS)
 // ==========================================
+// ==========================================
+// 3. INTERACTIVE MAP CLICK (NEW CONTRIBUTIONS)
+// ==========================================
+setTimeout(function() {
+    map.on('click', function(event) {
+        const clickedLatitude  = event.latlng.lat;
+        const clickedLongitude = event.latlng.lng;
 
-/**
- * Event listener catching clicks on the map canvas to target coordinates for a new submission.
- */
-map.on('click', function(event) {
-    const clickedLatitude = event.latlng.lat;
-    const clickedLongitude = event.latlng.lng;
-    
-    console.log(`Map interaction caught at: Lat ${clickedLatitude}, Lng ${clickedLongitude}`);
+        // Ask the user if they want to add an incident here
+        const confirm = window.confirm(
+            currentLang === 'es'
+            ? "¿Querés agregar un hito en este lugar?"
+            : "Do you want to add an incident at this location?"
+        );
 
-    // Verification Guard: Block execution if Leaflet fails to calculate valid geometric numbers
-    if (clickedLatitude === undefined || clickedLongitude === undefined || isNaN(clickedLatitude) || isNaN(clickedLongitude)) {
-        console.error("Geometry Engine Exception: Captured invalid coordinates.");
-        return;
-    }
+        if (!confirm) return;
 
-    // Clean up any existing draft pinpoint before placing a new one
-    if (activeCollabMarker) {
-        map.removeLayer(activeCollabMarker);
-    }
+        // Fill hidden form fields with clicked coordinates
+        document.getElementById('form-lat').value = clickedLatitude.toFixed(6);
+        document.getElementById('form-lng').value = clickedLongitude.toFixed(6);
 
-    // Generate a draggable pin so users can refine their placement accuracy manually
-    activeCollabMarker = L.marker([clickedLatitude, clickedLongitude], {
-        draggable: true
-    }).addTo(map);
+        // Place a temporary marker so the user sees where they clicked
+        if (activeCollabMarker) map.removeLayer(activeCollabMarker);
+        activeCollabMarker = L.marker([clickedLatitude, clickedLongitude], {
+            draggable: true
+        }).addTo(map);
 
-    activeCollabMarker.bindPopup("<b>Incident Target Location</b><br>Fill out the form fields to submit.").openPopup();
+        // Open the collaboration modal
+        openModal();
 
-    // Map coordinates to your hidden form fields in the HTML layout
-    const targetInputLat = document.getElementById('form-lat');
-    const targetInputLng = document.getElementById('form-lng');
-
-    if (targetInputLat && targetInputLng) {
-        targetInputLat.value = clickedLatitude;
-        targetInputLng.value = clickedLongitude;
-    } else {
-        console.warn("DOM Warning: Missing form target inputs with IDs 'form-lat' or 'form-lng'.");
-    }
-
-    // Re-bind coordinates on the fly if the user finishes dragging the pin around
-    activeCollabMarker.on('dragend', function(dragEvent) {
-        const updatedPosition = dragEvent.target.getLatLng();
-        if (targetInputLat && targetInputLng) {
-            targetInputLat.value = updatedPosition.lat;
-            targetInputLng.value = updatedPosition.lng;
-        }
-        console.log(`Marker dragged to updated coordinates: ${updatedPosition.lat}, ${updatedPosition.lng}`);
+        // Update coords if user drags the pin
+        activeCollabMarker.on('dragend', function(dragEvent) {
+            const pos = dragEvent.target.getLatLng();
+            document.getElementById('form-lat').value = pos.lat.toFixed(6);
+            document.getElementById('form-lng').value = pos.lng.toFixed(6);
+        });
     });
-});
+}, 0);
 
 // ==========================================
 // 4. SIDEBAR WORKSPACE INTERFACE
@@ -151,13 +146,14 @@ map.on('click', function(event) {
  * Populates and opens the sidebar to expose complete historical metadata for a clicked hito.
  * @param {Object} incident - The structured incident record dataset.
  */
+
 function openDetail(incident) {
+    currentIncident = incident;
     const cat     = CATEGORIES.find(c => c.id === incident.category_id);
     const lang    = currentLang;
     const title   = lang === 'es' ? incident.title_es       : incident.title_en;
     const desc    = lang === 'es' ? incident.description_es  : incident.description_en;  // Incident.description_es / description_en
     const catName = lang === 'es' ? cat.name_es              : cat.name_en;
- 
     /* category badge */
     const badge = document.getElementById('detail-cat-badge');
     badge.innerHTML        = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
