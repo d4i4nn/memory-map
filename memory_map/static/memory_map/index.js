@@ -1,11 +1,10 @@
 // ==========================================
 // 1. GLOBAL STATE & INITIALIZATION
 // ==========================================
-console.log("map object:", map);
 
 // Array to track active, approved incident markers currently displayed on the map
 let allMarkers = [];
-
+let markerWasClicked = false;
 // Pointer to track the single interactive marker created when reporting a new incident
 let activeCollabMarker = null;
 
@@ -21,6 +20,9 @@ function createColoredIcon(pinColor) {
     return L.divIcon({
         className: 'cat-pill',
         html: `<div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background-color: ${pinColor}; 
             width: 14px; 
             height: 14px; 
@@ -28,8 +30,8 @@ function createColoredIcon(pinColor) {
             border: 2px solid white; 
             box-shadow: 0 0 6px rgba(0,0,0,0.4);
         "></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
     });
 }
 // ==========================================
@@ -45,8 +47,8 @@ function displayMarkers(filterId) {
     allMarkers.forEach(marker => map.removeLayer(marker));
     allMarkers = [];
 
-    incidents.forEach(incident => {
-        // Safety Guard: Validate that coordinates fall within standard global bounding limits
+    incidents.forEach(function(incident) {  
+              // Safety Guard: Validate that coordinates fall within standard global bounding limits
         if (!incident.latitude || !incident.longitude
             || incident.latitude < -90  || incident.latitude > 90
             || incident.longitude < -180 || incident.longitude > 180) {
@@ -61,7 +63,6 @@ function displayMarkers(filterId) {
 
         // use state.activeCats from inline script
         if (typeof state !== 'undefined' && !state.activeCats.has(incident.category_id)) return;
-
 
         // Category Guard: Filter records based on selected dropdown options
         if (filterId !== 'all' && incident.category_id.toString() !== filterId) return;
@@ -78,11 +79,20 @@ function displayMarkers(filterId) {
         const customIcon = createColoredIcon(pinColor);
 
         // Instantiate Leaflet standard marker
-        const marker = L.marker([incident.latitude, incident.longitude]);
+        const marker = L.marker([incident.latitude, incident.longitude], {
+            icon: customIcon
+        });
         
         // Bind sidebar display routine to the marker click interaction
-        marker.on('click', () => openDetail(incident));
-        
+        (function(capturedIncident) {
+            console.log("registering marker :", capturedIncident.id, capturedIncident.title_es);
+            marker.on('click', function(e) {
+                markerWasClicked = true;
+                L.DomEvent.stopPropagation(e);
+                openDetail(capturedIncident);
+            });
+        })(incident);
+
         marker.addTo(map);
         allMarkers.push(marker); // Track inside our runtime reference array
     });
@@ -97,74 +107,120 @@ function filterCategory() {
 }
 
 // ==========================================
-// 3. INTERACTIVE MAP CLICK (NEW CONTRIBUTIONS)
+// 3. INTERACTIVE MAP CLICK 
 // ==========================================
-// ==========================================
-// 3. INTERACTIVE MAP CLICK (NEW CONTRIBUTIONS)
-// ==========================================
-setTimeout(function() {
+
+// Aseguramos un registro limpio del evento sobre el objeto 'map'
+if (typeof map !== 'undefined' && map) {
+    
+    // Escuchamos el evento preclick para resetear de forma segura el estado
+    map.on('preclick', function() {
+        // Si el clic entrante no toca un marcador, nos aseguramos de que la bandera sea falsa
+        setTimeout(() => {
+            if (!markerWasClicked) {
+                // Estado limpio para el clic en el mapa
+            }
+        }, 10);
+    });
+
     map.on('click', function(event) {
+    
+    console.log("MAP CLICK - markerWasClicked:", markerWasClicked);
+    console.log("MAP CLICK - event._stopped:", event.originalEvent._stopped);
+        // CAPA DE GUARDIA: Si el clic proviene de un marcador existente,
+        // consumimos la bandera 'markerWasClicked', la reseteamos y salimos.
+        if (markerWasClicked) {
+            console.log("Clic interceptado por un marcador existente. Cancelando registro global.");
+            markerWasClicked = false; // Reseteo crucial para el próximo clic
+            return;
+        }
+
+        // Si la propagación interna de Leaflet fue detenida de manera nativa
+        if (event.originalEvent && event.originalEvent._stopped) return;
+
         const clickedLatitude  = event.latlng.lat;
         const clickedLongitude = event.latlng.lng;
+        
+        console.log(`Global map registration / Lat: ${clickedLatitude}, Lng: ${clickedLongitude}`);
 
-        // Ask the user if they want to add an incident here
-        const confirm = window.confirm(
-            currentLang === 'es'
+        // Ventana de diálogo para confirmar la creación del nuevo hito
+        const userConfirmed = window.confirm(
+            typeof currentLang !== 'undefined' && currentLang === 'es'
             ? "¿Querés agregar un hito en este lugar?"
             : "Do you want to add an incident at this location?"
         );
 
-        if (!confirm) return;
+        if (!userConfirmed) return;
 
-        // Fill hidden form fields with clicked coordinates
-        document.getElementById('form-lat').value = clickedLatitude.toFixed(6);
-        document.getElementById('form-lng').value = clickedLongitude.toFixed(6);
+        // Referencias a los campos del formulario inyectado
+        const latField = document.getElementById('form-lat');
+        const lngField = document.getElementById('form-lng');
+        if (latField && lngField) {
+            latField.value = clickedLatitude.toFixed(6);
+            lngField.value = clickedLongitude.toFixed(6);
+        }
 
-        // Place a temporary marker so the user sees where they clicked
-        if (activeCollabMarker) map.removeLayer(activeCollabMarker);
+        // Renderizado del marcador temporal (Draft Pin)
+        if (activeCollabMarker) {
+            map.removeLayer(activeCollabMarker);
+        }
+        
         activeCollabMarker = L.marker([clickedLatitude, clickedLongitude], {
-            draggable: true
+            draggable: true,
+            icon: L.divIcon({
+                className: '',
+                html: `<div style="
+                    width:14px;height:14px;border-radius:50%;
+                    background:#2c2c2a;border:2px solid white;
+                    box-shadow:0 0 6px rgba(0,0,0,0.5);">
+                </div>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            })
         }).addTo(map);
 
-        // Open the collaboration modal
-        openModal();
-
-        // Update coords if user drags the pin
+        // Listener para actualizar coordenadas en tiempo real al arrastrar el marcador borrador
         activeCollabMarker.on('dragend', function(dragEvent) {
             const pos = dragEvent.target.getLatLng();
-            document.getElementById('form-lat').value = pos.lat.toFixed(6);
-            document.getElementById('form-lng').value = pos.lng.toFixed(6);
+            if (latField && lngField) {
+                latField.value = pos.lat.toFixed(6);
+                lngField.value = pos.lng.toFixed(6);
+            }
         });
-    });
-}, 0);
 
+        // Apertura visual del contenedor del formulario
+        if (typeof openModal === 'function') {
+            openModal(); 
+        } else {
+            const formContainer = document.getElementById('form-container'); 
+            if (formContainer) {
+                formContainer.classList.add('visible');
+            }
+        }
+    });
+}
 // ==========================================
 // 4. SIDEBAR WORKSPACE INTERFACE
 // ==========================================
 
-/**
- * Populates and opens the sidebar to expose complete historical metadata for a clicked hito.
- * @param {Object} incident - The structured incident record dataset.
- */
-
 function openDetail(incident) {
+    console.log("openDetail called with:", incident.id, incident.title_es);
+
     currentIncident = incident;
     const cat     = CATEGORIES.find(c => c.id === incident.category_id);
     const lang    = currentLang;
     const title   = lang === 'es' ? incident.title_es       : incident.title_en;
-    const desc    = lang === 'es' ? incident.description_es  : incident.description_en;  // Incident.description_es / description_en
+    const desc    = lang === 'es' ? incident.description_es  : incident.description_en;  
     const catName = lang === 'es' ? cat.name_es              : cat.name_en;
-    /* category badge */
+    
     const badge = document.getElementById('detail-cat-badge');
     badge.innerHTML        = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
     badge.style.background = cat.bg;
     badge.style.color      = cat.color;
  
     document.getElementById('detail-title').textContent = title;
-    // Incident.location_label + Incident.date_occurred year
     document.getElementById('detail-meta').textContent  = `${incident.year} · ${incident.location_label}`;
  
-    /* status badge — maps Incident.status to UI labels */
     const vBadge = document.getElementById('detail-verified');
     if (incident.status === 'approved') {
         vBadge.textContent = STRINGS[lang].verified_badge;
@@ -176,20 +232,17 @@ function openDetail(incident) {
  
     document.getElementById('detail-desc').textContent = desc;
  
-    /* tags — derived from category name + year (no separate model field) */
     const tagsEl = document.getElementById('detail-tags');
     tagsEl.innerHTML = [catName, String(incident.year)]
         .map(t => `<span class="detail-tag">${t}</span>`).join('');
- 
-    /* cover image — IncidentImage (order=0) serialized as cover_image url */
+ // cover image
     const imgEl = document.getElementById('detail-img');
     if (incident.cover_image) {
         imgEl.innerHTML = `<img src="${incident.cover_image}" alt="${title}" />`;
     } else {
         imgEl.innerHTML = `<span>${STRINGS[lang].no_image}</span>`;
     }
- 
-    /* sources — IncidentSource related objects */
+ // sources
     const sourcesEl = document.getElementById('detail-sources');
     if (incident.sources && incident.sources.length) {
         sourcesEl.innerHTML = `<div class="sb-label">Sources</div>` +
@@ -203,6 +256,12 @@ function openDetail(incident) {
     document.getElementById('detail-empty').style.display = 'none';
     document.getElementById('detail-content').classList.add('visible');
 }
+
+// ==========================================
+// 4. SIDEBAR WORKSPACE INTERFACE
+// ==========================================
+
+
 /**
  * Collapses the sidebar layout view.
  */
@@ -229,9 +288,7 @@ function closeSidebar() {
 // ==========================================
 // 5. ASYNCHRONOUS FORM SUBMISSION (AJAX/FETCH)
 // ==========================================
-
-/**
- * Interrupts standard form workflows to dispatch data payloads via AJAX asynchronously.
+/** Interrupts standard form workflows to dispatch data payloads via AJAX asynchronously.
  * @param {Event} e - Form submission event context.
  */
 function submitForm(e) {
