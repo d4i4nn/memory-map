@@ -107,7 +107,7 @@
             <button id="modal-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
  
-        <form id="collab-form" action="/contribute/" method="POST" onsubmit="submitForm(event)">
+        <form id="collab-form" onsubmit="submitForm(event)">
             {% csrf_token %}
  
             <!-- Incident.title_es  (user always writes in Spanish first) -->
@@ -217,6 +217,7 @@
 {{ incidents|json_script:"incidents-data" }}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
 /* ═══════════════════════════════════════════════════════════
    CATEGORIES — single source of truth
@@ -230,10 +231,7 @@ const CATEGORIES = [
     { id: 5, name_en: "Legal case",            name_es: "Caso judicial",            color: "#378ADD", bg: "#E6F1FB" },
     { id: 6, name_en: "Activism",              name_es: "Activismo",                color: "#639922", bg: "#EAF3DE" },
 ];
-</script>
 
- 
-<script>
 /* ═══════════════════════════════════════════════════════════
    i18n — bilingual string table
 ═══════════════════════════════════════════════════════════ */
@@ -315,6 +313,19 @@ const STRINGS = {
 let currentLang = 'en';
 let currentIncident = null;
 
+const INCIDENTS = JSON.parse(document.getElementById('incidents-data').textContent);
+ 
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+const state = {
+    activeCats: new Set(CATEGORIES.map(c => c.id)),
+    maxYear:    2026,
+    verifiedOnly: false,
+    searchQuery: "",
+};
+ 
+
  
 function setLang(lang) {
     currentLang = lang;
@@ -362,51 +373,9 @@ function setLang(lang) {
          },
          {% endfor %}
        ];
-═══════════════════════════════════════════════════════════ */
-const INCIDENTS = JSON.parse(document.getElementById('incidents-data').textContent);
- 
-/* ═══════════════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════════════ */
-const state = {
-    activeCats: new Set(CATEGORIES.map(c => c.id)),
-    maxYear:    2026,
-    verifiedOnly: false,
-    searchQuery: "",
-};
- 
-/* ═══════════════════════════════════════════════════════════
-   MAP SETUP
-═══════════════════════════════════════════════════════════ */
-const map = L.map('map', {
-    preferCanvas: true,
-    tap: false,
-    dragging: true,
-    clickTolerance: 3,
-}).setView([-38.4, -63.6], 4.5);
 
-L.tileLayer('https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=IrUrEsVpqSAIcot1VC8h', {
-    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-    maxZoom: 18,
-}).addTo(map);
- 
-/* Custom icon factory — returns a Leaflet DivIcon with the category color */
-function makeIcon(color) {
-    return L.divIcon({
-        className: '',
-        html: `<div class="custom-marker">
-                 <div class="marker-dot" style="background:${color}"></div>
-                 <div class="marker-stem" style="background:${color}"></div>
-               </div>`,
-        iconSize: [14, 22],
-        iconAnchor: [7, 22],
-        popupAnchor: [0, -24],
-    });
-}
  
 /* Build marker objects — each entry holds the Leaflet marker + incident data */
-
-
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -417,7 +386,7 @@ function applyFilters() {
     displayMarkers('all');
 }
 
- 
+
 function updateResultsCount(n) {
     const total = n !== undefined ? n : allMarkers.length;
     document.getElementById('results-count').textContent =
@@ -497,9 +466,13 @@ function shareIncident() {
 /* ═══════════════════════════════════════════════════════════
    MODAL
 ═══════════════════════════════════════════════════════════ */
-function openModal()  { document.getElementById('modal-overlay').classList.add('open'); }
+function openModal()  { 
+    const modal = document.getElementById('modal-overlay'); 
+    if (modal) modal.classList.add('open');
+    }
 function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('open');
+    const modal = document.getElementById('modal-overlay');
+    if (modal) modal.classList.remove('open');
     }
  
 function closeModalOnOverlay(e) {
@@ -511,11 +484,15 @@ function closeModalOnOverlay(e) {
 /* ═══════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════ */
-buildCategoryPills();
-updateResultsCount(INCIDENTS.length);
-updateYearDisplay(2024);
+document.addEventListener("DOMContentLoaded", function() {
+    buildCategoryPills();
+    updateResultsCount(INCIDENTS.length);
+    updateYearDisplay(2024);
+});
 </script>
+<script src="{% static 'memory_map/index.js' %}?v=1.1"></script>
 <!-- </body> -->
+
  {% endblock %}
 </html>
  

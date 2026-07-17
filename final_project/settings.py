@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -63,6 +63,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'debug': DEBUG,
         },
     },
 ]
@@ -116,3 +117,25 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'), # Si tienes una carpeta static global en la raíz
+]
+
+# 3. Carpeta donde se recopilarán los archivos en producción (opcional para desarrollo)
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# tu_proyecto/settings.py
+
+# Aseguramos el orden de búsqueda de archivos estáticos
+STATICFILES_FINDERS = [
+    # 1. Primero busca en la carpeta "static" de cada aplicación (desarrollo activo)
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    
+    # 2. Luego busca en las carpetas adicionales definidas en STATICFILES_DIRS
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+]
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# La URL pública que usará JavaScript para cargar las imágenes en el mapa
+MEDIA_URL = '/media/'

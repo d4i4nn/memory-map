@@ -1,11 +1,10 @@
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from .models import Incident, Category, IncidentImage, IncidentSource
 
 def index(request):
-    # categories = Category.objects.all()
-    # Importante: incluimos 'category_id' para que JS pueda filtrar
     incidents = Incident.objects.filter(status='approved').select_related('category')
 
     incidents_data = [
@@ -21,9 +20,10 @@ def index(request):
             "latitude":       i.latitude,
             "longitude":      i.longitude,
             "year":           i.date_occurred.year if i.date_occurred else None,
-            "cover_image":    None,   # Stage 7
-            "sources":        [],     # add later
-
+            "cover_image":    i.image.first().image.url if i.images.exists() else None,   # Stage 7
+            "sources":        [
+                {"label": s.label, "url": s.url} for s in i.sources.all()
+                ],
         }
         for i in incidents
     ]
@@ -37,7 +37,6 @@ def contribute(request):
     print("1 - view reached, method:", request.method)
 
     if request.method == "POST":
-         
         data = request.POST
         print("2 - POST data received:", data)
 
@@ -49,8 +48,8 @@ def contribute(request):
                date_occurred   = data['date_occurred'],
                category_id     = data['category'],
                location_label  = data['location_label'],
-               latitude        = data['latitude'],
-               longitude       = data['longitude'],
+               latitude        = float(data.get['latitude']) if data.get ('latitude') else None,
+               longitude       = float(data.get['longitud']) if data.get ('longitud') else None,
                contributor_name  = data['contributor_name'],
                contributor_email = data['contributor_email'],
                status = Incident.PENDING,
@@ -60,11 +59,22 @@ def contribute(request):
         IncidentSource.objects.create(
                incident = incident,
                url      = data['source_url'],
-               label    = data['source_label'],
+               label    = data['source_label'] or "Fuente de prensa",
            )
         print("4 - source created")
 
-        return redirect("index")
+        image_archive = request.FILES.get('image')
+
+        if image_archive:
+            IncidentImage.objects.create(
+                incident = incident,
+                image = image_archive,
+                caption = f"Evidencia - {incident.title_es}",
+                order = 0
+        )
+        print("5 image saved succcessfully")
+
+        return JsonResponse({"status": "success"}, status=201)
     
     return render(request, "memory_map/index.html", {
     })

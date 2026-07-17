@@ -1,24 +1,30 @@
-// ==========================================
-// 1. GLOBAL STATE & INITIALIZATION
-// ==========================================
-
-// Array to track active, approved incident markers currently displayed on the map
+/* ═══════════════════════════════════════════════════════════
+ /* ═══════════════════════════════════════════════════════════
+   MAP SETUP (Configuración Segura)
+   ═══════════════════════════════════════════════════════════ */
+// Variables globales
 let allMarkers = [];
-let markerWasClicked = false;
-// Pointer to track the single interactive marker created when reporting a new incident
 let activeCollabMarker = null;
-
-// Safe retrieval of the JSON data injected by the Django template context
+let markerWasClicked = false;
 const incidentsDataElement = document.getElementById('incidents-data');
 const incidents = incidentsDataElement ? JSON.parse(incidentsDataElement.textContent) : [];
-/**
- * Helper function to generate custom colored Leaflet icons dynamically
- * using standard HTML/CSS marker shapes.
- * @param {string} pinColor - The primary color for the center dot/border
- */
+
+console.log("Incidents loaded:", incidents.length);
+const map = L.map('map', {
+    preferCanvas: true,
+    tap: false,
+    dragging: true,
+    clickTolerance: 3,
+}).setView([-38.4, -63.6], 4.5);
+
+L.tileLayer('https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=IrUrEsVpqSAIcot1VC8h', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+}).addTo(map);
+
 function createColoredIcon(pinColor) {
     return L.divIcon({
-        className: 'cat-pill',
+        className: 'cat-pill-icon',
         html: `<div style="
             display: flex;
             align-items: center;
@@ -40,12 +46,10 @@ function createColoredIcon(pinColor) {
 
 /**
  * Clears existing approved markers and paints the filtered incident dataset onto the map layer.
-@param {string} filterId - The selected category database ID, or 'all' to show everything.
  */
 function displayMarkers(filterId) {
     // Memory Management: Remove old layers from the map to prevent leaks
     allMarkers.forEach(marker => map.removeLayer(marker));
-    allMarkers = [];
 
     incidents.forEach(function(incident) {  
               // Safety Guard: Validate that coordinates fall within standard global bounding limits
@@ -96,6 +100,9 @@ function displayMarkers(filterId) {
         marker.addTo(map);
         allMarkers.push(marker); // Track inside our runtime reference array
     });
+    if (typeof updateResultsCount === 'function') {
+        updateResultsCount(allMarkers.length);
+    }
 }
 
 /**
@@ -111,186 +118,141 @@ function filterCategory() {
 // ==========================================
 
 // Aseguramos un registro limpio del evento sobre el objeto 'map'
-if (typeof map !== 'undefined' && map) {
-    
-    // Escuchamos el evento preclick para resetear de forma segura el estado
-    map.on('preclick', function() {
-        // Si el clic entrante no toca un marcador, nos aseguramos de que la bandera sea falsa
-        setTimeout(() => {
-            if (!markerWasClicked) {
-                // Estado limpio para el clic en el mapa
-            }
-        }, 10);
-    });
 
-    map.on('click', function(event) {
-    
-    console.log("MAP CLICK - markerWasClicked:", markerWasClicked);
-    console.log("MAP CLICK - event._stopped:", event.originalEvent._stopped);
-        // CAPA DE GUARDIA: Si el clic proviene de un marcador existente,
-        // consumimos la bandera 'markerWasClicked', la reseteamos y salimos.
-        if (markerWasClicked) {
-            console.log("Clic interceptado por un marcador existente. Cancelando registro global.");
-            markerWasClicked = false; // Reseteo crucial para el próximo clic
-            return;
-        }
 
-        // Si la propagación interna de Leaflet fue detenida de manera nativa
-        if (event.originalEvent && event.originalEvent._stopped) return;
-
-        const clickedLatitude  = event.latlng.lat;
-        const clickedLongitude = event.latlng.lng;
+map.on('click', function(event) {
+    // CAPA DE GUARDIA: Si el clic proviene de un marcador existente,
+    // consumimos la bandera 'markerWasClicked', la reseteamos y salimos.
+    if (markerWasClicked) {
         
-        console.log(`Global map registration / Lat: ${clickedLatitude}, Lng: ${clickedLongitude}`);
+        console.log("MAP CLICK - markerWasClicked:", markerWasClicked);
+        console.log("MAP CLICK - event._stopped:", event.originalEvent._stopped);
+        markerWasClicked = false; // Reseteo crucial para el próximo clic
+        return;
+    }
 
-        // Ventana de diálogo para confirmar la creación del nuevo hito
-        const userConfirmed = window.confirm(
-            typeof currentLang !== 'undefined' && currentLang === 'es'
-            ? "¿Querés agregar un hito en este lugar?"
-            : "Do you want to add an incident at this location?"
-        );
+    // Si la propagación interna de Leaflet fue detenida de manera nativa
+    if (event.originalEvent && event.originalEvent._stopped) return;
 
-        if (!userConfirmed) return;
+    const clickedLatitude  = event.latlng.lat;
+    const clickedLongitude = event.latlng.lng;
+    
+    console.log(`Global map registration / Lat: ${clickedLatitude}, Lng: ${clickedLongitude}`);
 
-        // Referencias a los campos del formulario inyectado
-        const latField = document.getElementById('form-lat');
-        const lngField = document.getElementById('form-lng');
+    // Ventana de diálogo para confirmar la creación del nuevo hito
+    const userConfirmed = window.confirm(
+        typeof currentLang !== 'undefined' && currentLang === 'es'
+        ? "¿Querés agregar un hito en este lugar?"
+        : "Do you want to add an incident at this location?"
+    );
+
+    if (!userConfirmed) return;
+
+    // Referencias a los campos del formulario inyectado
+    const latField = document.getElementById('form-lat');
+    const lngField = document.getElementById('form-lng');
+    if (latField && lngField) {
+        latField.value = clickedLatitude.toFixed(6);
+        lngField.value = clickedLongitude.toFixed(6);
+    }
+
+    // Renderizado del marcador temporal (Draft Pin)
+    if (activeCollabMarker) {
+        map.removeLayer(activeCollabMarker);
+    }
+    
+    activeCollabMarker = L.marker([clickedLatitude, clickedLongitude], {
+        draggable: true,
+        icon: L.divIcon({
+            className: '',
+            html: `<div style="
+                width:14px;height:14px;border-radius:50%;
+                background:#2c2c2a;border:2px solid white;
+                box-shadow:0 0 6px rgba(0,0,0,0.5);">
+            </div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        })
+    }).addTo(map);
+
+    // Listener para actualizar coordenadas en tiempo real al arrastrar el marcador borrador
+    activeCollabMarker.on('dragend', function(dragEvent) {
+        const pos = dragEvent.target.getLatLng();
         if (latField && lngField) {
-            latField.value = clickedLatitude.toFixed(6);
-            lngField.value = clickedLongitude.toFixed(6);
-        }
-
-        // Renderizado del marcador temporal (Draft Pin)
-        if (activeCollabMarker) {
-            map.removeLayer(activeCollabMarker);
-        }
-        
-        activeCollabMarker = L.marker([clickedLatitude, clickedLongitude], {
-            draggable: true,
-            icon: L.divIcon({
-                className: '',
-                html: `<div style="
-                    width:14px;height:14px;border-radius:50%;
-                    background:#2c2c2a;border:2px solid white;
-                    box-shadow:0 0 6px rgba(0,0,0,0.5);">
-                </div>`,
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            })
-        }).addTo(map);
-
-        // Listener para actualizar coordenadas en tiempo real al arrastrar el marcador borrador
-        activeCollabMarker.on('dragend', function(dragEvent) {
-            const pos = dragEvent.target.getLatLng();
-            if (latField && lngField) {
-                latField.value = pos.lat.toFixed(6);
-                lngField.value = pos.lng.toFixed(6);
-            }
-        });
-
-        // Apertura visual del contenedor del formulario
-        if (typeof openModal === 'function') {
-            openModal(); 
-        } else {
-            const formContainer = document.getElementById('form-container'); 
-            if (formContainer) {
-                formContainer.classList.add('visible');
-            }
+            latField.value = pos.lat.toFixed(6);
+            lngField.value = pos.lng.toFixed(6);
         }
     });
-}
+
+    // Apertura visual del contenedor del formulario
+    if (typeof openModal === 'function') {
+        openModal(); 
+    } 
+});
+
 // ==========================================
 // 4. SIDEBAR WORKSPACE INTERFACE
 // ==========================================
 
 function openDetail(incident) {
     console.log("openDetail called with:", incident.id, incident.title_es);
-
     currentIncident = incident;
+    
     const cat     = CATEGORIES.find(c => c.id === incident.category_id);
     const lang    = currentLang;
-    const title   = lang === 'es' ? incident.title_es       : incident.title_en;
-    const desc    = lang === 'es' ? incident.description_es  : incident.description_en;  
-    const catName = lang === 'es' ? cat.name_es              : cat.name_en;
+    const title   = lang === 'es' ? incident.title_es : incident.title_en;
+    const desc    = lang === 'es' ? incident.description_es : incident.description_en;  
+    const catName = lang === 'es' ? cat.name_es : cat.name_en;
     
     const badge = document.getElementById('detail-cat-badge');
-    badge.innerHTML        = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
+    badge.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
     badge.style.background = cat.bg;
-    badge.style.color      = cat.color;
- 
+    badge.style.color = cat.color;
+    
     document.getElementById('detail-title').textContent = title;
-    document.getElementById('detail-meta').textContent  = `${incident.year} · ${incident.location_label}`;
- 
+    document.getElementById('detail-meta').textContent = `${incident.year} · ${incident.location_label}`;
+    
     const vBadge = document.getElementById('detail-verified');
     if (incident.status === 'approved') {
         vBadge.textContent = STRINGS[lang].verified_badge;
-        vBadge.className   = 'detail-verified yes';
+        vBadge.className = 'detail-verified yes';
     } else {
         vBadge.textContent = STRINGS[lang].pending_badge;
-        vBadge.className   = 'detail-verified pending';
+        vBadge.className = 'detail-verified pending';
     }
- 
+    
     document.getElementById('detail-desc').textContent = desc;
- 
+    
     const tagsEl = document.getElementById('detail-tags');
     tagsEl.innerHTML = [catName, String(incident.year)]
         .map(t => `<span class="detail-tag">${t}</span>`).join('');
- // cover image
+    
     const imgEl = document.getElementById('detail-img');
     if (incident.cover_image) {
         imgEl.innerHTML = `<img src="${incident.cover_image}" alt="${title}" />`;
     } else {
         imgEl.innerHTML = `<span>${STRINGS[lang].no_image}</span>`;
     }
- // sources
+    
     const sourcesEl = document.getElementById('detail-sources');
     if (incident.sources && incident.sources.length) {
         sourcesEl.innerHTML = `<div class="sb-label">Sources</div>` +
-            incident.sources.map(s =>
-                `<a href="${s.url}" target="_blank" rel="noopener">→ ${s.label}</a>`
-            ).join('');
+            incident.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">→ ${s.label}</a>`).join('');
     } else {
         sourcesEl.innerHTML = '';
     }
- 
+    
+    // OPEN the sidebar
+    const sidebar = document.getElementById("sidebar-detail");
+    if (sidebar) sidebar.style.width = "350px";
+    
     document.getElementById('detail-empty').style.display = 'none';
     document.getElementById('detail-content').classList.add('visible');
 }
-
-// ==========================================
-// 4. SIDEBAR WORKSPACE INTERFACE
-// ==========================================
-
-
-/**
- * Collapses the sidebar layout view.
- */
-function closeSidebar() {
-    const sidebar     = document.getElementById("sidebar-detail");
-    const emptyState  = document.getElementById("detail-empty");
-    const contentArea = document.getElementById("detail-content");
-
-    if (sidebar) {
-        sidebar.style.width = "0";
-    }
-
-    // Reset visibility states back to initial landing state after panel transition ends
-    setTimeout(() => {
-        if (emptyState)  emptyState.style.display = "block";
-        if (contentArea) contentArea.style.display = "none";
-        
-        if (typeof map !== 'undefined' && map) {
-            map.invalidateSize();
-        }
-    }, 500);
-}
-
 // ==========================================
 // 5. ASYNCHRONOUS FORM SUBMISSION (AJAX/FETCH)
 // ==========================================
-/** Interrupts standard form workflows to dispatch data payloads via AJAX asynchronously.
- * @param {Event} e - Form submission event context.
- */
+
 function submitForm(e) {
     e.preventDefault(); // HALT standard browser page-reload processing
     const formData = new FormData(e.target);
@@ -306,7 +268,9 @@ function submitForm(e) {
         if (response.ok) {
             alert('Thank you! Sent for review.');
             e.target.reset(); // Wipe all input entries from the visual form
-            
+            if (typeof closeModal === 'function') {
+                closeModal();
+            }
             // Clean up the draft map pin on success
             if (activeCollabMarker) {
                 map.removeLayer(activeCollabMarker);
@@ -325,4 +289,11 @@ function submitForm(e) {
 // 6. INITIAL RUNTIME RUN
 // ==========================================
 // Render all approved markers across all categories immediately upon loading
-displayMarkers('all');
+document.addEventListener("DOMContentLoaded", function() {
+    displayMarkers('all');
+    const formEl = document.querySelector('#modal-overlay form');
+    if (formEl) {
+        formEl.addEventListener('submit', submitForm);
+    }
+});
+// map.setView([-38.4, -63.6], 5);
