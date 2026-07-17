@@ -107,7 +107,7 @@
             <button id="modal-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
  
-        <form id="collab-form" onsubmit="submitForm(event)">
+        <form id="collab-form" action="/contribute/" method="POST" enctype="multipart/form-data" onsubmit="submitForm(event)">
             {% csrf_token %}
  
             <!-- Incident.title_es  (user always writes in Spanish first) -->

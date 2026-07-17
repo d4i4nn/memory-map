@@ -120,7 +120,12 @@ function filterCategory() {
 // Aseguramos un registro limpio del evento sobre el objeto 'map'
 
 
-map.on('click', function(event) {
+map.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+
+    document.getElementById('form-lat').value - lat;
+    document.getElementById('form-lng').value - lng;
     // CAPA DE GUARDIA: Si el clic proviene de un marcador existente,
     // consumimos la bandera 'markerWasClicked', la reseteamos y salimos.
     if (markerWasClicked) {
@@ -252,40 +257,45 @@ function openDetail(incident) {
 // ==========================================
 // 5. ASYNCHRONOUS FORM SUBMISSION (AJAX/FETCH)
 // ==========================================
-
 function submitForm(e) {
-    e.preventDefault(); // HALT standard browser page-reload processing
+    e.preventDefault(); 
+
     const formData = new FormData(e.target);
-    
+
     fetch('/contribute/', {
         method: 'POST',
         body: formData,
-        headers: { 
+        headers: {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value 
         }
     })
     .then(response => {
-        if (response.ok) {
-            alert('Thank you! Sent for review.');
-            e.target.reset(); // Wipe all input entries from the visual form
+        if (!response.ok) {
+            throw new Error('Error en el servidor de Django');
+        }
+        return response.json(); // Convierte la respuesta a un objeto JS
+    })
+    // ¡OJO ACÁ!: Asegurate de que acá diga 'data' adentro del paréntesis
+    .then(data => { 
+        console.log("Respuesta del servidor:", data);
+        
+        // Ahora sí podés usar 'data' de forma segura porque existe acá adentro
+        if (data.status === 'success') {
+            alert('¡Formulario enviado con éxito! Queda a la espera de aprobación.');
+            
+            // Si tenés una función para cerrar el modal y limpiar el mapa, llamala acá:
             if (typeof closeModal === 'function') {
                 closeModal();
             }
-            // Clean up the draft map pin on success
-            if (activeCollabMarker) {
-                map.removeLayer(activeCollabMarker);
-                activeCollabMarker = null;
-            }
-        } else {
-            alert('Something went wrong. Please try again.');
+            
+            // Opcional: resetea los campos del formulario
+            e.target.reset();
         }
     })
     .catch(error => {
-        console.error("Network communication exception:", error);
+        console.error('Network communication exception:', error);
     });
-}
-
-// ==========================================
+}// ==========================================
 // 6. INITIAL RUNTIME RUN
 // ==========================================
 // Render all approved markers across all categories immediately upon loading

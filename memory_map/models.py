@@ -68,8 +68,8 @@ class Incident(models.Model):
     
     
     # ── Geography ─────────────────────────────────────────────────
-    latitude  = models.FloatField()
-    longitude = models.FloatField()
+    latitude  = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     location_label = models.CharField(
         max_length=200,
         help_text="Human-readable location, e.g. 'Pinamar, Buenos Aires'",

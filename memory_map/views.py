@@ -33,13 +33,15 @@ def index(request):
     })
 
 def contribute(request):
-    
+
     print("1 - view reached, method:", request.method)
 
     if request.method == "POST":
         data = request.POST
         print("2 - POST data received:", data)
 
+        lat_value = data.get('latitude')
+        lng_value = data.get('longitud')
    
         #    POST payload keys match model fields exactly — Django view does:
         incident = Incident.objects.create(
@@ -48,8 +50,8 @@ def contribute(request):
                date_occurred   = data['date_occurred'],
                category_id     = data['category'],
                location_label  = data['location_label'],
-               latitude        = float(data.get['latitude']) if data.get ('latitude') else None,
-               longitude       = float(data.get['longitud']) if data.get ('longitud') else None,
+               latitude        = float(lat_value) if lat_value and lat_value.strip() else None,
+               longitude       = float(lng_value) if lng_value and lng_value.strip() else None,
                contributor_name  = data['contributor_name'],
                contributor_email = data['contributor_email'],
                status = Incident.PENDING,
