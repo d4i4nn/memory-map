@@ -152,8 +152,8 @@
                     <input class="form-control" type="text" name="location_label" required
                            data-i18n-placeholder="field_loc_ph" placeholder="City, Province" />
                     <!-- Hidden inputs filled when the user clicks the map -->
-                    <input type="hidden" name="latitude"  id="form-lat" />
-                    <input type="hidden" name="longitude" id="form-lng" />
+                    <input type="text" name="latitude"  id="form-lat" />
+                    <input type="text" name="longitude" id="form-lng" />
                     <div class="form-hint" data-i18n="field_loc_hint">
                         Or click on the map to drop a pin at the exact location.
                     </div>
@@ -490,7 +490,7 @@ document.addEventListener("DOMContentLoaded", function() {
     updateYearDisplay(2024);
 });
 </script>
-<script src="{% static 'memory_map/index.js' %}?v=1.1"></script>
+<script src="{% static 'memory_map/index.js' %}?v=1.2"></script>
 <!-- </body> -->
 
  {% endblock %}

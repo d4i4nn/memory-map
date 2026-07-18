@@ -41,7 +41,7 @@ def contribute(request):
         print("2 - POST data received:", data)
 
         lat_value = data.get('latitude')
-        lng_value = data.get('longitud')
+        lng_value = data.get('longitude')
    
         #    POST payload keys match model fields exactly — Django view does:
         incident = Incident.objects.create(
