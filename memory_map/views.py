@@ -20,7 +20,7 @@ def index(request):
             "latitude":       i.latitude,
             "longitude":      i.longitude,
             "year":           i.date_occurred.year if i.date_occurred else None,
-            "cover_image":    i.image.first().image.url if i.images.exists() else None,   # Stage 7
+            "cover_image":    i.images.first().image.url if i.images.exists() else None,   # Stage 7
             "sources":        [
                 {"label": s.label, "url": s.url} for s in i.sources.all()
                 ],

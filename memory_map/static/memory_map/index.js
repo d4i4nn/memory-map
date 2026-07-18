@@ -59,50 +59,64 @@ function displayMarkers(filterId) {
             console.warn("Skipping record due to out-of-bounds coordinates:", incident.title_es);
             return;
         }
+        console.log("Evaluando incidente para el mapa:", incident.title_es, {
+        year: incident.year,
+        category: incident.category_id,
+        status: incident.status
+        });
 
         // Editorial Guard: Only render points authorized by the review state
-        if (incident.status !== 'approved') return;
+        // if (incident.status !== 'approved') return;
         
-        if (typeof state !== 'undefined' && incident.year > state.maxYear) return;
+        if (typeof state !== 'undefined' && state.maxYear) {
+        const incidentYear = parseInt(incident.year, 10);
+        const maxMapYear = parseInt(state.maxYear, 10);
+        if (!isNaN(incidentYear) && !isNaN(maxMapYear) && incidentYear > maxMapYear) {
+            return; // Se pasa del año de la línea de tiempo
+        }
+    }
 
-        // use state.activeCats from inline script
-        if (typeof state !== 'undefined' && !state.activeCats.has(incident.category_id)) return;
+    // 3. Filtro de Categorías Activas Seguro
+    if (typeof state !== 'undefined' && state.activeCats) {
+        // Convertimos a string por las dudas para comparar peras con peras
+        const activeIdsAsStrings = Array.from(state.activeCats).map(id => id.toString());
+        if (!activeIdsAsStrings.includes(incident.category_id.toString())) {
+            return; // La categoría está desmarcada en el mapa
+        }
+    }
 
-        // Category Guard: Filter records based on selected dropdown options
-        if (filterId !== 'all' && incident.category_id.toString() !== filterId) return;
+    // 4. Filtro del Dropdown Select
+    if (filterId !== 'all' && incident.category_id.toString() !== filterId.toString()) {
+        return;
+    }
         let pinColor = "orange"; // Default fallback color
         
         if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
-            const matchedCategory = CATEGORIES.find(cat => cat.id.toString() === incident.category_id.toString());
-            if (matchedCategory && matchedCategory.color) {
-                pinColor = matchedCategory.color; // Extract the dynamic hex color string
-            }
+        const matchedCategory = CATEGORIES.find(cat => cat.id.toString() === incident.category_id.toString());
+        if (matchedCategory && matchedCategory.color) {
+            pinColor = matchedCategory.color; 
         }
-
-        // Generate the custom map point configuration using the matching color
-        const customIcon = createColoredIcon(pinColor);
-
-        // Instantiate Leaflet standard marker
-        const marker = L.marker([incident.latitude, incident.longitude], {
-            icon: customIcon
-        });
-        
-        // Bind sidebar display routine to the marker click interaction
-        (function(capturedIncident) {
-            console.log("registering marker :", capturedIncident.id, capturedIncident.title_es);
-            marker.on('click', function(e) {
-                markerWasClicked = true;
-                L.DomEvent.stopPropagation(e);
-                openDetail(capturedIncident);
-            });
-        })(incident);
-
-        marker.addTo(map);
-        allMarkers.push(marker); // Track inside our runtime reference array
-    });
-    if (typeof updateResultsCount === 'function') {
-        updateResultsCount(allMarkers.length);
     }
+
+    const customIcon = createColoredIcon(pinColor);
+    const marker = L.marker([parseFloat(incident.latitude), parseFloat(incident.longitude)], {
+        icon: customIcon
+    });
+    
+    // Vinculamos el click para abrir el detalle en la barra lateral
+    (function(capturedIncident) {
+        marker.on('click', function(e) {
+            markerWasClicked = true;
+            L.DomEvent.stopPropagation(e);
+            if (typeof openDetail === 'function') {
+                openDetail(capturedIncident);
+            }
+        });
+    })(incident);
+
+    marker.addTo(map);
+    allMarkers.push(marker); 
+});
 }
 
 /**
@@ -117,34 +131,18 @@ function filterCategory() {
 // 3. INTERACTIVE MAP CLICK 
 // ==========================================
 
-// Aseguramos un registro limpio del evento sobre el objeto 'map'
-
-
 map.on('click', function(e) {
-    const lat = e.latlng.lat;
-    const lng = e.latlng.lng;
+    const clickedLatitude  = e.latlng.lat;
+    const clickedLongitude = e.latlng.lng;
+    
+    console.log("Clic en el mapa. Coordenadas capturadas:", clickedLatitude, clickedLongitude);
 
-    document.getElementById('form-lat').value - lat;
-    document.getElementById('form-lng').value - lng;
-    // CAPA DE GUARDIA: Si el clic proviene de un marcador existente,
-    // consumimos la bandera 'markerWasClicked', la reseteamos y salimos.
     if (markerWasClicked) {
-        
         console.log("MAP CLICK - markerWasClicked:", markerWasClicked);
-        console.log("MAP CLICK - event._stopped:", event.originalEvent._stopped);
-        markerWasClicked = false; // Reseteo crucial para el próximo clic
+        markerWasClicked = false; // Reset
         return;
     }
 
-    // Si la propagación interna de Leaflet fue detenida de manera nativa
-    if (event.originalEvent && event.originalEvent._stopped) return;
-
-    const clickedLatitude  = event.latlng.lat;
-    const clickedLongitude = event.latlng.lng;
-    
-    console.log(`Global map registration / Lat: ${clickedLatitude}, Lng: ${clickedLongitude}`);
-
-    // Ventana de diálogo para confirmar la creación del nuevo hito
     const userConfirmed = window.confirm(
         typeof currentLang !== 'undefined' && currentLang === 'es'
         ? "¿Querés agregar un hito en este lugar?"
@@ -153,15 +151,19 @@ map.on('click', function(e) {
 
     if (!userConfirmed) return;
 
-    // Referencias a los campos del formulario inyectado
+    // 2. coord saved
     const latField = document.getElementById('form-lat');
     const lngField = document.getElementById('form-lng');
+    
     if (latField && lngField) {
         latField.value = clickedLatitude.toFixed(6);
         lngField.value = clickedLongitude.toFixed(6);
+        console.log("Inputs del formulario cargados con éxito.");
+    } else {
+        console.error("No se encontraron los inputs 'form-lat' o 'form-lng' en el HTML. Revisá los IDs.");
     }
 
-    // Renderizado del marcador temporal (Draft Pin)
+    // 3. RENDER draft pin
     if (activeCollabMarker) {
         map.removeLayer(activeCollabMarker);
     }
@@ -180,7 +182,7 @@ map.on('click', function(e) {
         })
     }).addTo(map);
 
-    // Listener para actualizar coordenadas en tiempo real al arrastrar el marcador borrador
+    // Listener to update the pointer
     activeCollabMarker.on('dragend', function(dragEvent) {
         const pos = dragEvent.target.getLatLng();
         if (latField && lngField) {
@@ -189,12 +191,10 @@ map.on('click', function(e) {
         }
     });
 
-    // Apertura visual del contenedor del formulario
     if (typeof openModal === 'function') {
         openModal(); 
     } 
 });
-
 // ==========================================
 // 4. SIDEBAR WORKSPACE INTERFACE
 // ==========================================
