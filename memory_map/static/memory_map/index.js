@@ -1,62 +1,90 @@
-/* ═══════════════════════════════════════════════════════════
  /* ═══════════════════════════════════════════════════════════
-   MAP SETUP (Configuración Segura)
+   MAP SETUP
    ═══════════════════════════════════════════════════════════ */
 // Variables globales
 let allMarkers = [];
 let activeCollabMarker = null;
 let markerWasClicked = false;
+let isSelectingLocation = false;
+
 const incidentsDataElement = document.getElementById('incidents-data');
 const incidents = incidentsDataElement ? JSON.parse(incidentsDataElement.textContent) : [];
 
 console.log("Incidents loaded:", incidents.length);
+
 L.Browser.touch = false;
 L.Browser.pointer = false;
+
 const map = L.map('map', {
     tap: false,
     dragging: true,
     clickTolerance: 10,
 }).setView([-38.4, -63.6], 4.5);
-map.getContainer().style.cursor = 'crosshair';
-
-document.getElementById('map').addEventListener('click', function(e) {
-    console.log("RAW MAP CLICK");
-    
-    const rect = this.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const point = L.point(x, y);
-    const latlng = map.containerPointToLatLng(point);
-    
-    console.log("Calculated latlng:", latlng);
-    
-    document.getElementById('form-lat').value = latlng.lat;
-    document.getElementById('form-lng').value = latlng.lng;
-    openModal();
-});
 
 L.tileLayer('https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=IrUrEsVpqSAIcot1VC8h', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 18,
 }).addTo(map);
-// 1. Escuchamos el click en el mapa de Leaflet
+
+
+// 1. button + Contribute an incident"
+function startCollaborationMode() {
+    isSelectingLocation = true;
+    
+    const modalOverlay = document.getElementById('modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.style.display = 'none';
+    }
+    
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+        mapContainer.style.cursor = 'crosshair';
+    }
+}
+
+function enableMapPicker(){
+    startCollaborationMode();
+}
+
 map.on('click', function(event) {
+    if (!isSelectingLocation) return;
+
     if (!event || !event.latlng) {
         console.error("El evento de Leaflet no contiene coordenadas válidas.", event);
         return;
     }
+
     const latitude = event.latlng.lat;
     const longitude = event.latlng.lng;
+
     const latInput = document.getElementById('form-lat');
     const lngInput = document.getElementById('form-lng');
+
     if (latInput && lngInput) {
         latInput.value = latitude;
         lngInput.value = longitude;
         console.log(`Coordenadas asignadas al formulario: Lat ${latitude}, Lng ${longitude}`);
     }
-    openModal(); 
+
+    isSelectingLocation = false;
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+        mapContainer.style.cursor = '';
+    }
+
+    const coordsIndicator = document.getElementById('coords-indicator');
+    if (coordsIndicator) {
+        coordsIndicator.style.display = 'inline';
+    }
+
+    if (typeof openModal === 'function') {
+        openModal();
+    } else {
+        const modalOverlay = document.getElementById('modal-overlay');
+        if (modalOverlay) modalOverlay.style.display = 'flex';
+    }
 });
+
 function createColoredIcon(pinColor) {
     return L.divIcon({
         className: 'cat-pill-icon',
@@ -162,78 +190,6 @@ function filterCategory() {
     displayMarkers(selectedCategory);
 }
 
-// ==========================================
-// 3. INTERACTIVE MAP CLICK 
-// ==========================================
-
-// map.on('click', function(e) {
-//     const clickedLatitude  = e.latlng.lat;
-//     const clickedLongitude = e.latlng.lng;
-    
-//     console.log("Clic en el mapa. Coordenadas capturadas:", clickedLatitude, clickedLongitude);
-
-//     if (markerWasClicked) {
-//         console.log("MAP CLICK - markerWasClicked:", markerWasClicked);
-//         markerWasClicked = false; // Reset
-//         return;
-//     }
-
-//     const userConfirmed = window.confirm(
-//         typeof currentLang !== 'undefined' && currentLang === 'es'
-//         ? "¿Querés agregar un hito en este lugar?"
-//         : "Do you want to add an incident at this location?"
-//     );
-
-//     if (!userConfirmed) return;
-
-//     // 2. coord saved
-//     const latField = document.getElementById('form-lat');
-//     const lngField = document.getElementById('form-lng');
-    
-//     if (latField && lngField) {
-//         latField.value = clickedLatitude.toFixed(6);
-//         lngField.value = clickedLongitude.toFixed(6);
-//         console.log("Inputs del formulario cargados con éxito.");
-//     } else {
-//         console.error("No se encontraron los inputs 'form-lat' o 'form-lng' en el HTML. Revisá los IDs.");
-//     }
-
-//     // 3. RENDER draft pin
-//     if (activeCollabMarker) {
-//         map.removeLayer(activeCollabMarker);
-//     }
-    
-//     activeCollabMarker = L.marker([clickedLatitude, clickedLongitude], {
-//         draggable: true,
-//         icon: L.divIcon({
-//             className: '',
-//             html: `<div style="
-//                 width:14px;height:14px;border-radius:50%;
-//                 background:#2c2c2a;border:2px solid white;
-//                 box-shadow:0 0 6px rgba(0,0,0,0.5);">
-//             </div>`,
-//             iconSize: [14, 14],
-//             iconAnchor: [7, 7]
-//         })
-//     }).addTo(map);
-
-//     // Listener to update the pointer
-//     activeCollabMarker.on('dragend', function(dragEvent) {
-//         const pos = dragEvent.target.getLatLng();
-//         if (latField && lngField) {
-//             latField.value = pos.lat.toFixed(6);
-//             lngField.value = pos.lng.toFixed(6);
-//         }
-//     });
-
-//     if (typeof openModal === 'function') {
-//         openModal(); 
-//     } 
-// });
-// ==========================================
-// 4. SIDEBAR WORKSPACE INTERFACE
-// ==========================================
-
 function openDetail(incident) {
     console.log("openDetail called with:", incident.id, incident.title_es);
     currentIncident = incident;
@@ -310,7 +266,7 @@ function submitForm(e) {
         }
         return response.json(); // Convierte la respuesta a un objeto JS
     })
-    // ¡OJO ACÁ!: Asegurate de que acá diga 'data' adentro del paréntesis
+    
     .then(data => { 
         console.log("Respuesta del servidor:", data);
         
@@ -341,4 +297,4 @@ document.addEventListener("DOMContentLoaded", function() {
         formEl.addEventListener('submit', submitForm);
     }
 });
-// map.setView([-38.4, -63.6], 5);
+

@@ -59,7 +59,7 @@
  
         <div style="flex:1"></div>
  
-        <button id="btn-collaborate" onclick="openModal()" data-i18n="collaborate_btn">
+        <button id="btn-collaborate" onclick="startCollaborationMode()" data-i18n="collaborate_btn">
             + Contribute an incident
         </button>
  
@@ -107,7 +107,7 @@
             <button id="modal-close" onclick="closeModal()" aria-label="Close">×</button>
         </div>
  
-        <form id="collab-form" action="/contribute/" method="POST" enctype="multipart/form-data" onsubmit="submitForm(event)">
+        <form id="collab-form" action="/contribute/" method="POST" enctype="multipart/form-data">
             {% csrf_token %}
  
             <!-- Incident.title_es  (user always writes in Spanish first) -->
@@ -154,6 +154,15 @@
                     <!-- Hidden inputs filled when the user clicks the map -->
                     <input type="text" name="latitude"  id="form-lat" />
                     <input type="text" name="longitude" id="form-lng" />
+                    <div style="margin-top: 8px;">
+                        <button type="button" id="btn=pick=coords" onclick="enableMapPicker()" class="btn-secondary">
+                            📍 Pick location on map
+                        </button>
+                        <span id="coords-indicator" style="font-size: 0.85rem; color: #2e7d32; display: none; margin-left: 8px;">
+                            ✓ Location set
+                        </span>
+                    </div>
+                    
                     <div class="form-hint" data-i18n="field_loc_hint">
                         Or click on the map to drop a pin at the exact location.
                     </div>

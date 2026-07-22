@@ -118,10 +118,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'), # Si tienes una carpeta static global en la raíz
-]
-
 # 3. Carpeta donde se recopilarán los archivos en producción (opcional para desarrollo)
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # tu_proyecto/settings.py
