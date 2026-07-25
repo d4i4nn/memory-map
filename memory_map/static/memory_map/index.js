@@ -21,26 +21,34 @@ const map = L.map('map', {
     clickTolerance: 10,
 }).setView([-38.4, -63.6], 4.5);
 
-L.tileLayer('https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=IrUrEsVpqSAIcot1VC8h', {
-    attribution: '© OpenStreetMap contributors',
+L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gris@EPSG:3857@png/{z}/{x}/{-y}.png', {
+    attribution: '© Instituto Geográfico Nacional Argentina',
     maxZoom: 18,
+    minZoom: 3,
+    // Opciones para suavizar la carga lenta:
+    updateWhenIdle: true,     // No descarga tiles mientras te arrastrás por el mapa, espera a que te detengas
+    updateWhenZooming: false,  // Espera a terminar el zoom antes de pedir imágenes nuevas
+    keepBuffer: 2
 }).addTo(map);
 
 
 // 1. button + Contribute an incident"
-function startCollaborationMode() {
+window.startCollaborationMode = function() {
     isSelectingLocation = true;
-    
-    const modalOverlay = document.getElementById('modal-overlay');
-    if (modalOverlay) {
-        modalOverlay.style.display = 'none';
+    console.log("selection mood activated");
+
+    if (typeof closeModal === 'function') {
+        closeModal();
+    } else {
+        const modalOverlay = document.getElementById('modal-overlay');
+        if (modalOverlay) modalOverlay.classList.remove('open');
     }
     
     const mapContainer = document.getElementById('map');
     if (mapContainer) {
         mapContainer.style.cursor = 'crosshair';
     }
-}
+};
 
 function enableMapPicker(){
     startCollaborationMode();
@@ -61,9 +69,11 @@ map.on('click', function(event) {
     const lngInput = document.getElementById('form-lng');
 
     if (latInput && lngInput) {
-        latInput.value = latitude;
-        lngInput.value = longitude;
+        latInput.value = latitude.toFixed(6);
+        lngInput.value = longitude.toFixed(6);
         console.log(`Coordenadas asignadas al formulario: Lat ${latitude}, Lng ${longitude}`);
+    } else {
+        console.error("input didnt found")
     }
 
     isSelectingLocation = false;
@@ -99,8 +109,8 @@ function createColoredIcon(pinColor) {
             border: 2px solid white; 
             box-shadow: 0 0 6px rgba(0,0,0,0.4);
         "></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
     });
 }
 // ==========================================
