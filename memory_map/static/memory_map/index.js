@@ -176,6 +176,9 @@ function displayMarkers(filterId) {
         icon: customIcon
     });
     
+    // data inciddent
+    marker.incidentData = incident;
+
     // Vinculamos el click para abrir el detalle en la barra lateral
     (function(capturedIncident) {
         marker.on('click', function(e) {
@@ -308,3 +311,75 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+
+function renderSearchResults(matchingMarkers) {
+    const listContainer = document.getElementById('search-results-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+
+    if (matchingMarkers.length === 0) {
+        listContainer.innerHTML = '<p class="no-results">No se encontraron resultados</p>';
+        return;
+    }
+
+    matchingMarkers.forEach(marker => {
+        const data = marker.incidentData;
+        if (!data) return;
+
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        
+        item.innerHTML = `
+            <div class="res-title">${data.title_es}</div>
+            <div class="res-sub">${data.year || ''} · ${data.location_label || ''}</div>
+        `;
+
+        item.addEventListener('click', () => {
+            map.flyTo([data.latitude, data.longitude], 12);
+            
+            openDetail(data);
+        });
+
+        listContainer.appendChild(item);
+    });
+}
+
+function applyFilters() {
+
+    // form html
+    const inputEl = document.getElementById('search-input');
+    const query = inputEl ? inputEl.value.toLowerCase().trim() : '';
+
+    const matchingMarkers = [];
+
+    allMarkers.forEach(marker => {
+
+        const incident = marker.incidentData || marker.options;
+
+        const title = (incident.title_es || '').toLowerCase();
+        const desc  = (incident.description_es || '').toLowerCase();
+        const place = (incident.location_label || '').toLowerCase();
+        const year  = String(incident.year || '');
+        
+        // it match?
+        const isMatch = !query ||
+                title.includes(query) || 
+               desc.includes(query)  || 
+               place.includes(query) || 
+               year.includes(query);
+
+        if (isMatch) {
+            marker.addTo(map);
+            matchingMarkers.push(marker);
+        } else {
+            map.removeLayer(marker);
+        }
+    });
+
+    if (!query) {
+        document.getElementById('search-results-list').innerHTML = '';
+    } else {
+            renderSearchResults(matchingMarkers);
+    }
+}

@@ -521,3 +521,30 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .leaflet-grab { cursor: cell; }
 .leaflet-dragging .leaflet-grab { cursor: move; }
 .leaflet-marker-icon { width: 14px !important; height: 14px !important; }
+
+.search-results {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.search-result-item {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.search-result-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.res-title {
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.res-sub {
+    font-size: 0.75em;
+    opacity: 0.7;
+}

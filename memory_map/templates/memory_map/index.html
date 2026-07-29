@@ -28,7 +28,8 @@
         <div class="sb-section">
             <div class="sb-label" data-i18n="search">Search</div>
             <input id="search-input" type="text" data-i18n-placeholder="search_placeholder"
-                   placeholder="Search by title, city, year…" oninput="applyFilters()" />
+                   placeholder="Search by title, city, year…" oninput="applyFilters(this.value)" />
+            <div id="search-results-list" class="search-results"></div>
         </div>
  
         <div class="sb-section">
@@ -47,13 +48,13 @@
                    step="1" oninput="onSliderMove(this.value)" />
             <div id="year-display">Up to: 2024</div>
         </div>
- 
+<!--  
         <div class="sb-section">
             <div class="toggle-row">
                 <span data-i18n="verified_only">Verified only</span>
                 <input type="checkbox" id="verified-toggle" onchange="applyFilters()" />
             </div>
-        </div>
+        </div> -->
  
         <div id="results-count"></div>
  
@@ -177,7 +178,7 @@
                     <input class="form-control" type="url" name="source_url" required
                            data-i18n-placeholder="field_source_ph" placeholder="https://…" />
                     <input class="form-control" type="text" name="source_label"
-                           placeholder="Label, e.g. Clarín — 12 mar 1997" style="margin-top:6px" />
+                           placeholder="Label, e.g. Télam — 12 mar 1997" style="margin-top:6px" />
                     <div class="form-hint" data-i18n="field_source_hint">
                         At least one verifiable source is required.
                     </div>
