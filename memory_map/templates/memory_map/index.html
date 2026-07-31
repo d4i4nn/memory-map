@@ -42,7 +42,7 @@
         <div class="sb-section">
             <div class="sb-label" data-i18n="time_range">Time range</div>
             <div class="year-range-labels">
-                <span>1983</span><span>2024</span>
+                <span>1983</span><span>2026</span>
             </div>
             <input id="year-slider" type="range" min="1983" max="2024" value="2024"
                    step="1" oninput="onSliderMove(this.value)" />
@@ -55,8 +55,6 @@
                 <input type="checkbox" id="verified-toggle" onchange="applyFilters()" />
             </div>
         </div> -->
- 
-        <div id="results-count"></div>
  
         <div style="flex:1"></div>
  
@@ -248,7 +246,7 @@ const CATEGORIES = [
 ═══════════════════════════════════════════════════════════ */
 const STRINGS = {
     en: {
-        app_title:         "Memory Map Archive — Antiracist History",
+        app_title:         "Memory Map Archive",
         search:            "Search",
         search_placeholder:"Search by title, city, year…",
         categories:        "Categories",
@@ -284,7 +282,7 @@ const STRINGS = {
         pending_badge:     "⏳ Pending review",
     },
     es: {
-        app_title:         "Cartografía de la memoria antirracista",
+        app_title:         "Cartografía de la memoria",
         search:            "Búsqueda",
         search_placeholder:"Buscar por título, ciudad, año…",
         categories:        "Categorías",

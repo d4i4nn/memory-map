@@ -41,8 +41,9 @@ h1, h2, h3, .sb-label {
     color: var(--bg-main);
     border-bottom: 3px solid var(--accent-earth);
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 0 20px; /* Corregido error de px */
+    padding: 0 20px; 
     gap: 14px;
     flex-shrink: 0;
     z-index: 1000;
@@ -53,7 +54,7 @@ h1, h2, h3, .sb-label {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .05em;
-    color: #f4f0e8; /* Título claro contrastado sobre el fondo oscuro */
+    color: #f4f0e8; 
 }
 
 /* Language toggle */
@@ -204,13 +205,7 @@ h1, h2, h3, .sb-label {
     cursor: pointer;
 }
 
-/* Results count */
-#results-count {
-    padding: 12px 20px;
-    font-size: 11px;
-    color: var(--text-muted);
-    z-index: 1;
-}
+
 
 /* ── Map ──────────────────────────────────────────────────── */
 #map {
@@ -251,11 +246,11 @@ h1, h2, h3, .sb-label {
     display: none; 
     flex-direction: column; 
     flex: 1; 
-    padding: 20px; /* Margen general contenedor para despegar del borde */
+    padding: 20px;
     gap: 16px;
 }
 
-#detail-content.visible { display: flex; }
+#detail-content.visible { display: block; }
 
 /* Tarjeta contenedora de la crónica */
 .detail-card {

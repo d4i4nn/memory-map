@@ -25,9 +25,8 @@ L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gri
     attribution: '© Instituto Geográfico Nacional Argentina',
     maxZoom: 18,
     minZoom: 3,
-    // Opciones para suavizar la carga lenta:
-    updateWhenIdle: true,     // No descarga tiles mientras te arrastrás por el mapa, espera a que te detengas
-    updateWhenZooming: false,  // Espera a terminar el zoom antes de pedir imágenes nuevas
+    updateWhenIdle: true,     
+    updateWhenZooming: false,  
     keepBuffer: 2
 }).addTo(map);
 
@@ -149,12 +148,11 @@ function displayMarkers(filterId) {
         }
     }
 
-    // 3. Filtro de Categorías Activas Seguro
+    // 3. Filter Active Categories
     if (typeof state !== 'undefined' && state.activeCats) {
-        // Convertimos a string por las dudas para comparar peras con peras
         const activeIdsAsStrings = Array.from(state.activeCats).map(id => id.toString());
         if (!activeIdsAsStrings.includes(incident.category_id.toString())) {
-            return; // La categoría está desmarcada en el mapa
+            return; 
         }
     }
 
@@ -179,7 +177,7 @@ function displayMarkers(filterId) {
     // data inciddent
     marker.incidentData = incident;
 
-    // Vinculamos el click para abrir el detalle en la barra lateral
+    // click to open the bar
     (function(capturedIncident) {
         marker.on('click', function(e) {
             markerWasClicked = true;
