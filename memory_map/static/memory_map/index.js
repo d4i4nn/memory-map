@@ -53,17 +53,7 @@ function enableMapPicker(){
     startCollaborationMode();
 }
 
-map.on('click', function(event) {
-    if (!isSelectingLocation) return;
-
-    if (!event || !event.latlng) {
-        console.error("El evento de Leaflet no contiene coordenadas válidas.", event);
-        return;
-    }
-
-    const latitude = event.latlng.lat;
-    const longitude = event.latlng.lng;
-
+function captureLocation(latitude, longitude) {
     const latInput = document.getElementById('form-lat');
     const lngInput = document.getElementById('form-lng');
 
@@ -92,6 +82,17 @@ map.on('click', function(event) {
         const modalOverlay = document.getElementById('modal-overlay');
         if (modalOverlay) modalOverlay.style.display = 'flex';
     }
+}
+
+map.on('click', function(event) {
+    if (!isSelectingLocation) return;
+
+    if (!event || !event.latlng) {
+        console.error("El evento de Leaflet no contiene coordenadas válidas.", event);
+        return;
+    }
+
+    captureLocation(event.latlng.lat, event.latlng.lng);
 });
 
 function createColoredIcon(pinColor) {
@@ -180,6 +181,11 @@ function displayMarkers(filterId) {
     // click to open the bar
     (function(capturedIncident) {
         marker.on('click', function(e) {
+            if (isSelectingLocation) {
+                const p = marker.getLatLng();
+                captureLocation(p.lat, p.lng);
+                return;
+            }
             markerWasClicked = true;
             L.DomEvent.stopPropagation(e);
             if (typeof openDetail === 'function') {

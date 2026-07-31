@@ -350,9 +350,7 @@ function setLang(lang) {
         if (STRINGS[lang][key]) el.placeholder = STRINGS[lang][key];
     });
     updateYearDisplay(document.getElementById('year-slider').value);
-    // update results count using index.js variable
-    document.getElementById('results-count').textContent =
-        `${allMarkers.length} ${STRINGS[lang].results}`;
+    updateResultsCount();
     //re render side bar in new lang 
     if (currentIncident) openDetail (currentIncident);
 }
@@ -398,8 +396,8 @@ function applyFilters() {
 
 function updateResultsCount(n) {
     const total = n !== undefined ? n : allMarkers.length;
-    document.getElementById('results-count').textContent =
-        `${total} ${STRINGS[currentLang].results}`;
+    const el = document.getElementById('results-count');
+    if (el) el.textContent = `${total} ${STRINGS[currentLang].results}`;
 }
  
 /* Year slider */
