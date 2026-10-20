@@ -61,7 +61,7 @@ def contribute(request):
         IncidentSource.objects.create(
                incident = incident,
                url      = data['source_url'],
-               label    = data['source_label'] or "Fuente de prensa",
+            #    label    = data['source_label'] or "Fuente de prensa",
            )
         print("4 - source created")
 

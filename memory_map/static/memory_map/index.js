@@ -387,3 +387,108 @@ function applyFilters() {
             renderSearchResults(matchingMarkers);
     }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   LOCATION AUTOCOMPLETE  (Nominatim / OpenStreetMap)
+═══════════════════════════════════════════════════════════ */
+let locDebounceTimer = null;
+let locAbortController = null;
+let locLastResults = [];
+
+function initLocationAutocomplete() {
+    const input = document.getElementById('location_label');
+    if (!input) return;
+
+    input.addEventListener('input', () => {
+        clearTimeout(locDebounceTimer);
+        const query = input.value.trim();
+        if (query.length < 3) { closeSuggestions(); return; }
+        locDebounceTimer = setTimeout(() => searchPlaces(query), 300);
+    });
+
+    input.addEventListener('focus', () => {
+        if (locLastResults.length) renderSuggestions(locLastResults);
+    });
+
+    input.addEventListener('blur', () => setTimeout(closeSuggestions, 150));
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.loc-autocomplete')) closeSuggestions();
+    });
+}
+
+async function searchPlaces(query) {
+    if (locAbortController) locAbortController.abort();
+    locAbortController = new AbortController();
+
+    try {
+        const url = 'https://nominatim.openstreetmap.org/search'
+            + '?format=jsonv2&limit=5'
+            + '&countrycodes=ar'
+            + '&accept-language=' + encodeURIComponent(currentLang)
+            + '&q=' + encodeURIComponent(query);
+
+        const res = await fetch(url, { signal: locAbortController.signal });
+        if (!res.ok) throw new Error('Nominatim ' + res.status);
+        const data = await res.json();
+
+        locLastResults = data;
+        renderSuggestions(data);
+    } catch (err) {
+        if (err.name !== 'AbortError') console.error('Autocomplete error:', err);
+    }
+}
+
+function renderSuggestions(list) {
+    const box = document.getElementById('loc-suggestions');
+    const input = document.getElementById('location_label');
+    if (!box) return;
+
+    box.innerHTML = '';
+    const noResultsKey = STRINGS[currentLang].loc_no_results;
+
+    if (!list.length) {
+        const li = document.createElement('li');
+        li.className = 'loc-noresult';
+        li.textContent = noResultsKey;
+        box.appendChild(li);
+    } else {
+        list.forEach(place => {
+            const li = document.createElement('li');
+            li.setAttribute('role', 'option');
+            li.textContent = place.display_name;
+            li.addEventListener('mousedown', e => {
+                e.preventDefault();
+                selectPlace(place);
+            });
+            box.appendChild(li);
+        });
+    }
+
+    box.style.display = 'block';
+    if (input) input.setAttribute('aria-expanded', 'true');
+}
+
+function selectPlace(place) {
+    const input = document.getElementById('location_label');
+    const latInput = document.getElementById('form-lat');
+    const lngInput = document.getElementById('form-lng');
+    const indicator = document.getElementById('coords-indicator');
+
+    if (input) input.value = place.display_name.split(',').slice(0, 2).join(',').trim();
+    if (latInput) latInput.value = parseFloat(place.lat).toFixed(6);
+    if (lngInput) lngInput.value = parseFloat(place.lon).toFixed(6);
+    if (indicator) indicator.style.display = 'inline';
+
+    closeSuggestions();
+}
+
+function closeSuggestions() {
+    const box = document.getElementById('loc-suggestions');
+    const input = document.getElementById('location_label');
+    if (box) box.style.display = 'none';
+    if (input) input.setAttribute('aria-expanded', 'false');
+    locLastResults = [];
+}
+
+document.addEventListener('DOMContentLoaded', initLocationAutocomplete);

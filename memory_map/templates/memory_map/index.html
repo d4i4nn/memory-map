@@ -111,32 +111,32 @@
  
             <!-- Incident.title_es  (user always writes in Spanish first) -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_title">
-                    Title <span class="required">*</span>
+                <label class="form-label">
+                <span data-i18n="field_title">Title </span> <span class="required">*</span>
                     <input type="text" class="form-control" name="title_es" required>
                 </label>
             </div>
  
             <!-- Incident.description_es -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_description">
-                    Description <span class="required">*</span>
-                    <textarea class="form-control" name="description_es" required></textarea>
+                <label class="form-label">
+                <span data-i18n="field_description">Description </span> <span class="required">*</span>
+                    <input type="text" class="form-control" name="description_es" required>
                 </label>
             </div>
  
             <div class="form-grid">
                 <!-- Incident.date_occurred -->
                 <div class="form-group">
-                    <label class="form-label" data-i18n="field_date">
-                        Date <span class="required">*</span>
-                        <input class="form-control" type="date" name="date_occurred" required />
+                    <label class="form-label"> 
+                        <span data-i18n="field_date">Date </span> <span class="required">*</span>
+                        <input type= "date" class="form-control" name="date_occurred" required>
                     </label>
                 </div>
                 <!-- Incident.category  (FK id) -->
                 <div class="form-group">
-                    <label class="form-label" data-i18n="field_category">
-                        Category <span class="required">*</span>
+                    <label class="form-label">
+                        <span data-i18n="field_category">Category </span> <span class="required">*</span>
                         <select class="form-control" name="category" id="modal-category" required>
                             <!-- populated by buildCategoryPills() -->
                         </select>
@@ -146,19 +146,20 @@
  
             <!-- Incident.location_label + Incident.latitude / Incident.longitude -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_location">
-                    Location <span class="required">*</span>
-                </label>
-                <input id="location_label" class="form-control"type="text" name="location_label" required
-                        data-i18n-placeholder="field_loc_ph" placeholder="City, Province" />
+                <label class="form-label">
+                <span data-i18n="field_location">Location</span> <span class="required">*</span>
+                
+                <div class="loc-autocomplete">
+                    <input id="location_label" class="form-control" type="text" name="location_label" required
+                    autocomplete="off" role="combobox" aria-expanded="false" aria-controls="loc-suggestions"
+                    data-i18n-placeholder="field_loc_ph" placeholder="City, Province" />
+                    <ul id="loc-suggestions" class="loc-suggestions" role="listbox"></ul>
+                </div>
                 <!-- Hidden inputs filled when the user clicks the map -->
-                <input type="text" name="latitude"  id="form-lat" />
-                <input type="text" name="longitude" id="form-lng" />
+                <input type="hidden" name="latitude"  id="form-lat" />
+                <input type="hidden" name="longitude" id="form-lng" />
                 
                 <div style="margin-top: 8px;">
-                    <button type="button" id="btn-pick-coords" onclick="enableMapPicker()" class="btn-secondary">
-                        📍 Pick location on map
-                    </button>
                     <span id="coords-indicator" style="font-size: 0.85rem; color: #2e7d32; display: none; margin-left: 8px;">
                         ✓ Location set
                     </span>
@@ -167,16 +168,20 @@
                 <div class="form-hint" data-i18n="field_loc_hint">
                     Or click on the map to drop a pin at the exact location.
                 </div>
+                    <button type="button" id="btn-pick-coords" onclick="enableMapPicker()" class="btn-secondary">
+                        📍 Pick location on map
+                    </button>
+                </label>
             </div>
  
             <!-- IncidentSource.url + IncidentSource.label (first source) -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_source">
-                    Journalistic sources <span class="required">*</span>
-                    <input class="form-control" type="url" name="source_url" required
-                           data-i18n-placeholder="field_source_ph" placeholder="https://…" />
-                    <input class="form-control" type="text" name="source_label"
-                           placeholder="Label, e.g. Télam — 12 mar 1997" style="margin-top:6px" />
+                <label class="form-label">
+                    <span data-i18n="field_source">Journalistic sources</span> <span class="required">*</span>
+                    <input type="url" class="form-control" name="source_url" required>
+                           <span data-i18n-placeholder="field_source_ph" placeholder="https://…" />
+                    <!-- <input class="form-control" type="text" name="source_label"
+                           placeholder="Label, e.g. Télam — 12 mar 1997" style="margin-top:6px" /> -->
                     <div class="form-hint" data-i18n="field_source_hint">
                         At least one verifiable source is required.
                     </div>
@@ -199,11 +204,12 @@
  
             <!-- Incident.contributor_name + Incident.contributor_email -->
             <div class="form-group">
-                <label class="form-label" data-i18n="field_contributor">Your details
-                <input class="form-control" type="text" name="contributor_name"
+                <label class="form-label">
+                <span data-i18n="field_contributor">Your details</span> 
+                <input type="text" class="form-control" name="contributor_name"
                        data-i18n-placeholder="field_name_ph" placeholder="Your name or alias"
                        style="margin-bottom:8px" />
-                <input class="form-control" type="email" name="contributor_email"
+                <input type="email" class="form-control" name="contributor_email"
                        data-i18n-placeholder="field_email_ph"
                        placeholder="Contact email (not published)" />
                 </label>
@@ -267,6 +273,7 @@ const STRINGS = {
         field_location:    "Location",
         field_loc_ph:      "City, Province",
         field_loc_hint:    "Or click on the map to drop a pin at the exact location.",
+        loc_no_results:    "No matches found",
         field_source:      "Journalistic sources",
         field_source_ph:   "https://…",
         field_source_hint: "At least one verifiable source is required.",
@@ -303,6 +310,7 @@ const STRINGS = {
         field_location:    "Ubicación",
         field_loc_ph:      "Ciudad, Provincia",
         field_loc_hint:    "O hacé clic en el mapa para marcar el punto exacto.",
+        loc_no_results:    "Sin resultados",
         field_source:      "Fuentes periodísticas",
         field_source_ph:   "https://…",
         field_source_hint: "Se requiere al menos una fuente verificable.",
@@ -349,6 +357,7 @@ function setLang(lang) {
         const key = el.dataset.i18nPlaceholder;
         if (STRINGS[lang][key]) el.placeholder = STRINGS[lang][key];
     });
+    if (typeof closeSuggestions === 'function') closeSuggestions();
     updateYearDisplay(document.getElementById('year-slider').value);
     updateResultsCount();
     //re render side bar in new lang 
