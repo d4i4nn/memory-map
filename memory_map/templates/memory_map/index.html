@@ -360,6 +360,10 @@ function setLang(lang) {
     if (typeof closeSuggestions === 'function') closeSuggestions();
     updateYearDisplay(document.getElementById('year-slider').value);
     updateResultsCount();
+    buildCategoryPills();
+    document.querySelectorAll('.cat-pill').forEach(p => {
+        if (!state.activeCats.has(Number(p.dataset.catId))) p.classList.add('inactive');
+    });
     //re render side bar in new lang 
     if (currentIncident) openDetail (currentIncident);
 }
