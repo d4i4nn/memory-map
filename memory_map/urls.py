@@ -1,4 +1,3 @@
-
 from django.urls import path
 from . import views  # Importamos las vistas de tu aplicación
 

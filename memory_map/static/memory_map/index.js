@@ -247,13 +247,21 @@ function openDetail(incident) {
         imgEl.innerHTML = `<span>${STRINGS[lang].no_image}</span>`;
     }
     
-    const sourcesEl = document.getElementById('detail-sources');
-    if (incident.sources && incident.sources.length) {
-        sourcesEl.innerHTML = `<div class="sb-label">Sources</div>` +
-            incident.sources.map(s => `<a href="${s.url}" target="_blank" rel="noopener">→ ${s.label}</a>`).join('');
-    } else {
-        sourcesEl.innerHTML = '';
-    }
+   sourcesEl.replaceChildren();
+if (incident.sources && incident.sources.length) {
+    const label = document.createElement('div');
+    label.className = 'sb-label';
+    label.textContent = 'Sources';
+    sourcesEl.appendChild(label);
+    incident.sources.forEach(s => {
+        const a = document.createElement('a');
+        a.href = s.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = `→ ${s.label}`;     // textContent: nunca interpreta HTML
+        sourcesEl.appendChild(a);
+    });
+}
     
     // OPEN the sidebar
     const sidebar = document.getElementById("sidebar-detail");
@@ -277,29 +285,16 @@ function submitForm(e) {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value 
         }
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en el servidor de Django');
-        }
-        return response.json(); // Convierte la respuesta a un objeto JS
-    })
-    
-    .then(data => { 
-        console.log("Respuesta del servidor:", data);
-        
-        // Ahora sí podés usar 'data' de forma segura porque existe acá adentro
-        if (data.status === 'success') {
-            alert('¡Formulario enviado con éxito! Queda a la espera de aprobación.');
-            
-            // Si tenés una función para cerrar el modal y limpiar el mapa, llamala acá:
-            if (typeof closeModal === 'function') {
-                closeModal();
-            }
-            
-            // Opcional: resetea los campos del formulario
-            e.target.reset();
-        }
-    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+.then(({ ok, data }) => {
+    if (ok && data.status === 'success') {
+        alert('¡Formulario enviado con éxito! Queda a la espera de aprobación.');
+        closeModal();
+        e.target.reset();
+    } else {
+        alert(data.message || 'No se pudo enviar el formulario.');
+    }
+})
     .catch(error => {
         console.error('Network communication exception:', error);
     });

@@ -1,14 +1,24 @@
-import json
-from django.core.serializers.json import DjangoJSONEncoder
-from django.shortcuts import render, redirect
+import logging
+from django import forms
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.shortcuts import render
 from django.http import JsonResponse
-from .models import Incident, Category, IncidentImage, IncidentSource
+from django.views.decorators.http import require_POST
+from .models import Incident, IncidentImage, IncidentSource
+
+logger = logging.getLogger(__name__)
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 def index(request):
-    incidents = Incident.objects.filter(status='approved').select_related('category')
+    incidents = (Incident.objects
+                 .filter(status=Incident.APPROVED)
+                 .prefetch_related("sources", "images"))
 
-    incidents_data = [
-        {
+    incidents_data = []
+    for i in incidents:
+        images = list(i.images.all())
+        incidents_data.append({
             "id":             i.id,
             "category_id":    i.category_id,
             "status":         i.status,
@@ -19,64 +29,65 @@ def index(request):
             "location_label": i.location_label,
             "latitude":       i.latitude,
             "longitude":      i.longitude,
-            "year":           i.date_occurred.year if i.date_occurred else None,
-            "cover_image":    i.images.first().image.url if i.images.exists() else None,   # Stage 7
+            "year": i.year,
+            "cover_image": images[0].image.url if images else None,
             "sources":        [
-                {"label": s.label, "url": s.url} for s in i.sources.all()
-                ],
-        }
-        for i in incidents
-    ]
-    
+                {"label": s.label, "url": s.url} for s in i.sources.all()],
+        })
     return render(request, "memory_map/index.html", {
-        "incidents": incidents_data,
-    })
+        "incidents": incidents_data})
 
+def _to_float(value):
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        raise ValidationError("Coordenadas inválidas.")
+
+
+@require_POST
 def contribute(request):
-
-    print("1 - view reached, method:", request.method)
-
-    if request.method == "POST":
         data = request.POST
-        print("2 - POST data received:", data)
+        try:
+             with transaction.atomic():
+                  incident = Incident(
+                    title_es        = data.get("title_es", "").strip(),
+                    description_es  = data.get("description_es", "").strip(),
+                    date_occurred   = data.get("date_occurred") or None,
+                    category_id     = data.get("category") or None,
+                    location_label  = data.get("location_label").strip(),
+                    latitude        = _to_float(data.get("latitude")),
+                    longitude       = _to_float(data.get("longitud")),
+                    contributor_name  = data.get("contributor_name", "").strip(),
+                    contributor_email = data.get("contributor_email", "").strip(),
+                    status = Incident.PENDING,
+                  )
+                  incident.full_clean()
+                  incident.save()
 
-        lat_value = data.get('latitude')
-        lng_value = data.get('longitude')
-   
-        #    POST payload keys match model fields exactly — Django view does:
-        incident = Incident.objects.create(
-               title_es        = data['title_es'],
-               description_es  = data['description_es'],
-               date_occurred   = data['date_occurred'],
-               category_id     = data['category'],
-               location_label  = data['location_label'],
-               latitude        = float(lat_value) if lat_value and lat_value.strip() else None,
-               longitude       = float(lng_value) if lng_value and lng_value.strip() else None,
-               contributor_name  = data['contributor_name'],
-               contributor_email = data['contributor_email'],
-               status = Incident.PENDING,
-           )
-        print("3 - incident created, id:", incident.id)
-
-        IncidentSource.objects.create(
-               incident = incident,
-               url      = data['source_url'],
-            #    label    = data['source_label'] or "Fuente de prensa",
-           )
-        print("4 - source created")
-
-        image_archive = request.FILES.get('image')
-
-        if image_archive:
-            IncidentImage.objects.create(
-                incident = incident,
-                image = image_archive,
-                caption = f"Evidencia - {incident.title_es}",
-                order = 0
-        )
-        print("5 image saved succcessfully")
-
+                  url = data.get("source_url", "").strip()
+                  source = IncidentSource(
+                       incident=incident,
+                       url=url,
+                       label=data.get("source_label", "").strip() or url,
+                  )
+                  source.full_clean()
+                  source.save()
+                  image = request.FILES.get("image")
+                  if image:
+                        if image.size > MAX_IMAGE_BYTES:
+                            raise ValidationError("la imagen supera los 5MB")
+                        forms.ImageField().clean(image) #verifica la imagen
+                        IncidentImage.objects.create(
+                            incident = incident,
+                            image =image,
+                            caption = f"Evidencia - {incident.title_es}",
+                            order = 0
+                        )
+        except ValidationError as e:
+            return JsonResponse({"status":"error", "message": " ".join(e.messages)}, status=400)
+        logger.info("Incidente nuevo pendiente de revisión: id=%s", incident.id)
         return JsonResponse({"status": "success"}, status=201)
     
-    return render(request, "memory_map/index.html", {
-    })

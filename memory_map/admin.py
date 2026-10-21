@@ -1,20 +1,21 @@
 from django.contrib import admin
+from django.utils import timezone
 from .models import Category, Incident, HistoricalPeriod, IncidentSource, IncidentImage
 # Register your models here.
 
 admin.site.register(Category)
 admin.site.register(HistoricalPeriod)
-admin.site.register(IncidentSource)
-admin.site.register(IncidentImage)
 
 # custom actions
 @admin.action(description="Mark selected incidents as approved")
 def make_approved(modeladmin, request, queryset):
-    queryset.update(status="approved")
+        n = queryset.update(status=Incident.APPROVED, updated_at=timezone.now())
+        modeladmin.message_user(request, f"{n} incidente(s) aprobado(s).")
 
 @admin.action(description="Mark selected incidents as rejected")
 def make_rejected(modeladmin, request, queryset):
-    queryset.update(status="rejected")
+    n = queryset.update(status=Incident.REJECTED, updated_at=timezone.now())
+    modeladmin.message_user(request, f"{n} incidente(s) rechazado(s).")
 
 # Esto permite administrar las imágenes desde el mismo Incidente
 class IncidentImageInline(admin.TabularInline):
@@ -28,9 +29,12 @@ class IncidentSourceInline(admin.TabularInline):
     
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
-    list_display  = ["title_es", "category", "status", "date_occurred", "contributor_name"]
+    list_display  = ["title_es", "category", "status", "has_coords", "date_occurred", "contributor_name"]
     list_filter   = ["status", "category"]
     search_fields = ["title_es", "title_en", "location_label"]
     actions       = [make_approved, make_rejected]
     inlines = [IncidentImageInline, IncidentSourceInline]
-    
+
+    @admin.display(boolean=True, description="Coords")
+    def has_coords(self, obj):
+        return obj.latitude is not None and obj.longitude is not None
