@@ -230,22 +230,16 @@
 <!-- Leaflet JS -->
 
 {{ incidents|json_script:"incidents-data" }}
+{{ categories|json_script:"categories-data" }}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   CATEGORIES — single source of truth
-   (In the Django version these come from the DB via template tag)
+   CATEGORIES — single source of truth: the database.
+   Server-rendered so every id/name/color matches the DB.
 ═══════════════════════════════════════════════════════════ */
-const CATEGORIES = [
-    { id: 1, name_en: "Police violence",       name_es: "Violencia policial",      color: "#1D9E75", bg: "#E1F5EE" },
-    { id: 2, name_en: "Labor discrimination",  name_es: "Discriminación laboral",   color: "#534AB7", bg: "#EEEDFE" },
-    { id: 3, name_en: "Hate crime",            name_es: "Crimen de odio",           color: "#D85A30", bg: "#FAECE7" },
-    { id: 4, name_en: "Hate speech",           name_es: "Discurso de odio",         color: "#BA7517", bg: "#FAEEDA" },
-    { id: 5, name_en: "Legal case",            name_es: "Caso judicial",            color: "#378ADD", bg: "#E6F1FB" },
-    { id: 6, name_en: "Activism",              name_es: "Activismo",                color: "#639922", bg: "#EAF3DE" },
-];
+const CATEGORIES = JSON.parse(document.getElementById('categories-data').textContent);
 
 /* ═══════════════════════════════════════════════════════════
    i18n — bilingual string table

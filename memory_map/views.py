@@ -5,7 +5,7 @@ from django.db import transaction
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from .models import Incident, IncidentImage, IncidentSource
+from .models import Category, Incident, IncidentImage, IncidentSource
 
 logger = logging.getLogger(__name__)
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -34,8 +34,20 @@ def index(request):
             "sources":        [
                 {"label": s.label, "url": s.url} for s in i.sources.all()],
         })
+    categories_data = [
+        {
+            "id":       c.id,
+            "name_en":  c.name_en,
+            "name_es":  c.name_es,
+            "color":    c.color_hex,
+            "bg":       f"{c.color_hex}22",
+        }
+        for c in Category.objects.all()
+    ]
     return render(request, "memory_map/index.html", {
-        "incidents": incidents_data})
+        "incidents":  incidents_data,
+        "categories": categories_data,
+    })
 
 def _to_float(value):
     value = (value or "").strip()
@@ -52,14 +64,18 @@ def contribute(request):
         data = request.POST
         try:
              with transaction.atomic():
+                  category_id = data.get("category") or None
+                  if not category_id:
+                        raise ValidationError("Seleccioná una categoría.")
+
                   incident = Incident(
                     title_es        = data.get("title_es", "").strip(),
                     description_es  = data.get("description_es", "").strip(),
                     date_occurred   = data.get("date_occurred") or None,
-                    category_id     = data.get("category") or None,
-                    location_label  = data.get("location_label").strip(),
+                    category_id     = category_id,
+                    location_label  = (data.get("location_label") or "").strip(),
                     latitude        = _to_float(data.get("latitude")),
-                    longitude       = _to_float(data.get("longitud")),
+                    longitude       = _to_float(data.get("longitude")),
                     contributor_name  = data.get("contributor_name", "").strip(),
                     contributor_email = data.get("contributor_email", "").strip(),
                     status = Incident.PENDING,

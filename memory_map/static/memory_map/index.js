@@ -71,9 +71,25 @@ function captureLocation(latitude, longitude) {
         mapContainer.style.cursor = '';
     }
 
+    if (activeCollabMarker) map.removeLayer(activeCollabMarker);
+    activeCollabMarker = L.marker([latitude, longitude]).addTo(map);
+
     const coordsIndicator = document.getElementById('coords-indicator');
     if (coordsIndicator) {
         coordsIndicator.style.display = 'inline';
+    }
+
+    const locationInput = document.getElementById('location_label');
+    if (locationInput) {
+        locationInput.value = '';
+        locationInput.placeholder = currentLang === 'es'
+            ? 'Buscando ubicación…'
+            : 'Looking up location…';
+        reverseGeocode(latitude, longitude).then(function(place) {
+            if (!place) return;
+            locationInput.value = place;
+            locationInput.placeholder = STRINGS[currentLang].field_loc_ph;
+        });
     }
 
     if (typeof openModal === 'function') {
@@ -81,6 +97,24 @@ function captureLocation(latitude, longitude) {
     } else {
         const modalOverlay = document.getElementById('modal-overlay');
         if (modalOverlay) modalOverlay.style.display = 'flex';
+    }
+}
+
+async function reverseGeocode(latitude, longitude) {
+    try {
+        const url = 'https://nominatim.openstreetmap.org/reverse'
+            + '?format=jsonv2'
+            + '&accept-language=' + encodeURIComponent(currentLang)
+            + '&lat=' + encodeURIComponent(latitude)
+            + '&lon=' + encodeURIComponent(longitude);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Nominatim ' + res.status);
+        const data = await res.json();
+        if (!data || !data.display_name) return null;
+        return data.display_name.split(',').slice(0, 2).join(',').trim();
+    } catch (err) {
+        console.error('Reverse geocoding error:', err);
+        return null;
     }
 }
 
@@ -182,6 +216,7 @@ function displayMarkers(filterId) {
     (function(capturedIncident) {
         marker.on('click', function(e) {
             if (isSelectingLocation) {
+                L.DomEvent.stopPropagation(e);
                 const p = marker.getLatLng();
                 captureLocation(p.lat, p.lng);
                 return;

@@ -20,7 +20,7 @@ class CategoryModelTests(TestCase):
         Category.objects.create(name_en="A", name_es="Alfa")
         Category.objects.create(name_en="B", name_es="Beta")
         names = list(Category.objects.values_list("name_en", flat=True))
-        self.assertEqual(names, ["A", "B", "State Violence"])
+        self.assertEqual(names, ["A", "Activism", "B", "State Violence"])
 
 
 class HistoricalPeriodModelTests(TestCase):
