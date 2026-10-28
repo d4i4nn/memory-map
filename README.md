@@ -2,8 +2,6 @@
 
 # Cartografía de la Memoria Antirracista (Anti-Racist Memory Mapping)
 
-📌 **CS50 Web Programming Capstone Project**
-
 ## 📖 Overview
 
 Cartografía de la Memoria Antirracista is an interactive, collaborative mapping platform designed to document, geographically track, and preserve the memory of systemic and structural racism, and hate crimes, in Argentina.
