@@ -133,14 +133,14 @@
                         <input type= "date" class="form-control" name="date_occurred" required>
                     </label>
                 </div>
-                <!-- Incident.category  (FK id) -->
+                <!-- Incidents Categories (ManyToManyField) -->
                 <div class="form-group">
                     <label class="form-label">
-                        <span data-i18n="field_category">Category </span> <span class="required">*</span>
-                        <select class="form-control" name="category" id="modal-category" required>
-                            <!-- populated by buildCategoryPills() -->
-                        </select>
+                        <span data-i18n="field_category">Categories (Select one or more)</span> <span class="required">*</span>
                     </label>
+                    <div id="modal-categories-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px;">
+                        <!-- Populated dynamically by buildCategoryPills() -->
+                    </div>
                 </div>
             </div>
  
@@ -395,12 +395,8 @@ function setLang(lang) {
 /* ═══════════════════════════════════════════════════════════
    FILTER ENGINE
    All filters funneled through a single applyFilters() call
+   (defined in index.js, which loads after this script)
 ═══════════════════════════════════════════════════════════ */
-function applyFilters() {
-    displayMarkers('all');
-}
-
-
 function updateResultsCount(n) {
     const total = n !== undefined ? n : allMarkers.length;
     const el = document.getElementById('results-count');
@@ -424,9 +420,9 @@ function updateYearDisplay(value) {
 ═══════════════════════════════════════════════════════════ */
 function buildCategoryPills() {
     const container = document.getElementById('category-list');
-    const select    = document.getElementById('modal-category');
+    const modalCatContainer = document.getElementById('modal-categories-container');
     container.innerHTML = '';
-    select.innerHTML    = '';
+    if (modalCatContainer) modalCatContainer.innerHTML = '';
  
     CATEGORIES.forEach(cat => {
 
@@ -444,10 +440,25 @@ function buildCategoryPills() {
         container.appendChild(pill);
  
         /* modal select option */
-        const opt = document.createElement('option');
-        opt.value       = cat.id;
-        opt.textContent = name;
-        select.appendChild(opt);
+        if (modalCatContainer){
+            const wrapper = document.createElement('label');
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems  = 'center';
+            wrapper.style.gap = '8px';
+            wrapper.style.cursor = 'pointer';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'categories';
+            checkbox.value = cat.id;
+
+            const labelText = document.createElement('span');
+            labelText.textContent = name;
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(labelText);
+            modalCatContainer.appendChild(wrapper);
+        }
     });
 }
  
@@ -504,7 +515,7 @@ document.addEventListener("DOMContentLoaded", function() {
     updateYearDisplay(2026);
 });
 </script>
-<script src="{% static 'memory_map/index.js' %}?v=1.2"></script>
+<script src="{% static 'memory_map/index.js' %}?v=1.3"></script>
 <!-- </body> -->
 
  {% endblock %}

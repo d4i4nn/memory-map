@@ -29,12 +29,16 @@ class IncidentSourceInline(admin.TabularInline):
     
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
-    list_display  = ["title_es", "category", "status", "has_coords", "date_occurred", "contributor_name"]
-    list_filter   = ["status", "category"]
+    list_display  = ["title_es", "display_categories", "status", "has_coords", "date_occurred", "contributor_name"]
+    list_filter   = ["status", "categories"]
     search_fields = ["title_es", "title_en", "location_label"]
     actions       = [make_approved, make_rejected]
     inlines = [IncidentImageInline, IncidentSourceInline]
-
+    
+    @admin.display(description="Categorías")
+    def display_categories(self, obj):
+        return ", ".join([c.name_es for c in obj.categories.all()])
+ 
     @admin.display(boolean=True, description="Coords")
     def has_coords(self, obj):
         return obj.latitude is not None and obj.longitude is not None

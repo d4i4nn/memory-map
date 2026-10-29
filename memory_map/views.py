@@ -13,14 +13,14 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024
 def index(request):
     incidents = (Incident.objects
                  .filter(status=Incident.APPROVED)
-                 .prefetch_related("sources", "images"))
+                 .prefetch_related("sources", "images", "categories"))
+    categories = list(Category.objects.values("id", "name_es", "name_en", "color_hex"))
 
     incidents_data = []
     for i in incidents:
         images = list(i.images.all())
         incidents_data.append({
             "id":             i.id,
-            "category_id":    i.category_id,
             "status":         i.status,
             "title_es":       i.title_es,
             "title_en":       i.title_en,
@@ -31,22 +31,20 @@ def index(request):
             "longitude":      i.longitude,
             "year": i.year,
             "cover_image": images[0].image.url if images else None,
+            "categories":     [
+                {
+                    "id": c.id, 
+                    "name_es": c.name_es, 
+                    "name_en": c.name_en, 
+                    "color_hex": c.color_hex
+                } for c in i.categories.all()
+            ],
             "sources":        [
                 {"label": s.label, "url": s.url} for s in i.sources.all()],
         })
-    categories_data = [
-        {
-            "id":       c.id,
-            "name_en":  c.name_en,
-            "name_es":  c.name_es,
-            "color":    c.color_hex,
-            "bg":       f"{c.color_hex}22",
-        }
-        for c in Category.objects.all()
-    ]
     return render(request, "memory_map/index.html", {
         "incidents":  incidents_data,
-        "categories": categories_data,
+        "categories": categories,
     })
 
 def _to_float(value):
@@ -64,15 +62,10 @@ def contribute(request):
         data = request.POST
         try:
              with transaction.atomic():
-                  category_id = data.get("category") or None
-                  if not category_id:
-                        raise ValidationError("Seleccioná una categoría.")
-
                   incident = Incident(
                     title_es        = data.get("title_es", "").strip(),
                     description_es  = data.get("description_es", "").strip(),
                     date_occurred   = data.get("date_occurred") or None,
-                    category_id     = category_id,
                     location_label  = (data.get("location_label") or "").strip(),
                     latitude        = _to_float(data.get("latitude")),
                     longitude       = _to_float(data.get("longitude")),
@@ -82,6 +75,9 @@ def contribute(request):
                   )
                   incident.full_clean()
                   incident.save()
+                  category_ids = data.getlist("categories")
+                  if category_ids:
+                       incident.categories.set(category_ids)
 
                   url = data.get("source_url", "").strip()
                   source = IncidentSource(

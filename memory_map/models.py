@@ -85,10 +85,10 @@ class Incident(models.Model):
     )
  
     # ── Classification ────────────────────────────────────────────
-    category = models.ForeignKey(
+    categories = models.ManyToManyField(
         Category,
-        on_delete=models.PROTECT,   # prevent accidental deletion of a category with incidents
         related_name="incidents",
+        blank=True
     )
  
     # ── Moderation ────────────────────────────────────────────────

@@ -157,6 +157,15 @@ function createColoredIcon(pinColor) {
 function displayMarkers(filterId) {
     // Memory Management: Remove old layers from the map to prevent leaks
     allMarkers.forEach(marker => map.removeLayer(marker));
+    allMarkers = [];
+
+    const visibleMarkers = [];
+    const query = (typeof state !== 'undefined' && state.searchQuery)
+        ? state.searchQuery.toString().toLowerCase().trim()
+        : '';
+    const activeFilter = (filterId === undefined || filterId === null)
+        ? 'all'
+        : filterId.toString();
 
     incidents.forEach(function(incident) {  
               // Safety Guard: Validate that coordinates fall within standard global bounding limits
@@ -166,11 +175,6 @@ function displayMarkers(filterId) {
             console.warn("Skipping record due to out-of-bounds coordinates:", incident.title_es);
             return;
         }
-        console.log("Evaluando incidente para el mapa:", incident.title_es, {
-        year: incident.year,
-        category: incident.category_id,
-        status: incident.status
-        });
 
         // Editorial Guard: Only render points authorized by the review state
         // if (incident.status !== 'approved') return;
@@ -192,9 +196,23 @@ function displayMarkers(filterId) {
     }
 
     // 4. Filtro del Dropdown Select
-    if (filterId !== 'all' && incident.category_id.toString() !== filterId.toString()) {
+    if (activeFilter !== 'all' && incident.category_id.toString() !== activeFilter) {
         return;
     }
+
+    // 5. Free-text search (composes with category + year filters)
+    if (query) {
+        const haystack = [
+            incident.title_es,
+            incident.description_es,
+            incident.location_label,
+            incident.year,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (!haystack.includes(query)) {
+            return;
+        }
+    }
+
         let pinColor = "orange"; // Default fallback color
         
         if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
@@ -230,8 +248,22 @@ function displayMarkers(filterId) {
     })(incident);
 
     marker.addTo(map);
-    allMarkers.push(marker); 
+    allMarkers.push(marker);
+    visibleMarkers.push(marker);
 });
+
+    if (typeof updateResultsCount === 'function') {
+        updateResultsCount(visibleMarkers.length);
+    }
+
+    if (typeof renderSearchResults === 'function') {
+        if (query) {
+            renderSearchResults(visibleMarkers);
+        } else {
+            const list = document.getElementById('search-results-list');
+            if (list) list.innerHTML = '';
+        }
+    }
 }
 
 /**
@@ -250,12 +282,14 @@ function openDetail(incident) {
     const lang    = currentLang;
     const title   = lang === 'es' ? incident.title_es : incident.title_en;
     const desc    = lang === 'es' ? incident.description_es : incident.description_en;  
-    const catName = lang === 'es' ? cat.name_es : cat.name_en;
+    const catName = cat ? (lang === 'es' ? cat.name_es : cat.name_en) : '';
     
     const badge = document.getElementById('detail-cat-badge');
-    badge.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
-    badge.style.background = cat.bg;
-    badge.style.color = cat.color;
+    if (cat) {
+        badge.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
+        badge.style.background = cat.bg;
+        badge.style.color = cat.color;
+    }
     
     document.getElementById('detail-title').textContent = title;
     document.getElementById('detail-meta').textContent = `${incident.year} · ${incident.location_label}`;
@@ -282,8 +316,9 @@ function openDetail(incident) {
         imgEl.innerHTML = `<span>${STRINGS[lang].no_image}</span>`;
     }
     
-   sourcesEl.replaceChildren();
-if (incident.sources && incident.sources.length) {
+   const sourcesEl = document.getElementById('detail-sources');
+   if (sourcesEl) sourcesEl.replaceChildren();
+if (sourcesEl && incident.sources && incident.sources.length) {
     const label = document.createElement('div');
     label.className = 'sb-label';
     label.textContent = 'Sources';
@@ -380,42 +415,13 @@ function renderSearchResults(matchingMarkers) {
 }
 
 function applyFilters() {
-
-    // form html
     const inputEl = document.getElementById('search-input');
-    const query = inputEl ? inputEl.value.toLowerCase().trim() : '';
-
-    const matchingMarkers = [];
-
-    allMarkers.forEach(marker => {
-
-        const incident = marker.incidentData || marker.options;
-
-        const title = (incident.title_es || '').toLowerCase();
-        const desc  = (incident.description_es || '').toLowerCase();
-        const place = (incident.location_label || '').toLowerCase();
-        const year  = String(incident.year || '');
-        
-        // it match?
-        const isMatch = !query ||
-                title.includes(query) || 
-               desc.includes(query)  || 
-               place.includes(query) || 
-               year.includes(query);
-
-        if (isMatch) {
-            marker.addTo(map);
-            matchingMarkers.push(marker);
-        } else {
-            map.removeLayer(marker);
-        }
-    });
-
-    if (!query) {
-        document.getElementById('search-results-list').innerHTML = '';
-    } else {
-            renderSearchResults(matchingMarkers);
+    if (typeof state !== 'undefined') {
+        state.searchQuery = inputEl ? inputEl.value : '';
     }
+
+    const selectEl = document.getElementById('category-filter');
+    displayMarkers(selectEl ? selectEl.value : 'all');
 }
 
 /* ═══════════════════════════════════════════════════════════
