@@ -190,13 +190,13 @@ function displayMarkers(filterId) {
     // 3. Filter Active Categories
     if (typeof state !== 'undefined' && state.activeCats) {
         const activeIdsAsStrings = Array.from(state.activeCats).map(id => id.toString());
-        if (!activeIdsAsStrings.includes(incident.category_id.toString())) {
+        if (!activeIdsAsStrings.includes(incident.categories.toString())) {
             return; 
         }
     }
 
     // 4. Filtro del Dropdown Select
-    if (activeFilter !== 'all' && incident.category_id.toString() !== activeFilter) {
+    if (activeFilter !== 'all' && incident.categories.toString() !== activeFilter) {
         return;
     }
 
@@ -216,7 +216,7 @@ function displayMarkers(filterId) {
         let pinColor = "orange"; // Default fallback color
         
         if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
-        const matchedCategory = CATEGORIES.find(cat => cat.id.toString() === incident.category_id.toString());
+        const matchedCategory = CATEGORIES.find(cat => cat.id.toString() === incident.categories.toString());
         if (matchedCategory && matchedCategory.color) {
             pinColor = matchedCategory.color; 
         }
@@ -278,7 +278,7 @@ function openDetail(incident) {
     console.log("openDetail called with:", incident.id, incident.title_es);
     currentIncident = incident;
     
-    const cat     = CATEGORIES.find(c => c.id === incident.category_id);
+    const cat     = CATEGORIES.find(c => c.id === incident.categories);
     const lang    = currentLang;
     const title   = lang === 'es' ? incident.title_es : incident.title_en;
     const desc    = lang === 'es' ? incident.description_es : incident.description_en;  
