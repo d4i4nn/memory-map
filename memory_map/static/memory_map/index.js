@@ -187,16 +187,18 @@ function displayMarkers(filterId) {
         }
     }
 
-    // 3. Filter Active Categories
-    if (typeof state !== 'undefined' && state.activeCats) {
+    // 3. Filter Active Categories (each incident holds an array of categories)
+    const incidentCategories = Array.isArray(incident.categories) ? incident.categories : [];
+    const incidentCatIds = incidentCategories.map(c => c.id.toString());
+    if (typeof state !== 'undefined' && state.activeCats && incidentCatIds.length) {
         const activeIdsAsStrings = Array.from(state.activeCats).map(id => id.toString());
-        if (!activeIdsAsStrings.includes(incident.categories.toString())) {
+        if (!incidentCatIds.some(id => activeIdsAsStrings.includes(id))) {
             return; 
         }
     }
 
     // 4. Filtro del Dropdown Select
-    if (activeFilter !== 'all' && incident.categories.toString() !== activeFilter) {
+    if (activeFilter !== 'all' && !incidentCatIds.includes(activeFilter)) {
         return;
     }
 
@@ -215,12 +217,9 @@ function displayMarkers(filterId) {
 
         let pinColor = "orange"; // Default fallback color
         
-        if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
-        const matchedCategory = CATEGORIES.find(cat => cat.id.toString() === incident.categories.toString());
-        if (matchedCategory && matchedCategory.color) {
-            pinColor = matchedCategory.color; 
+        if (incidentCategories.length && incidentCategories[0].color_hex) {
+            pinColor = incidentCategories[0].color_hex;
         }
-    }
 
     const customIcon = createColoredIcon(pinColor);
     const marker = L.marker([parseFloat(incident.latitude), parseFloat(incident.longitude)], {
@@ -278,17 +277,24 @@ function openDetail(incident) {
     console.log("openDetail called with:", incident.id, incident.title_es);
     currentIncident = incident;
     
-    const cat     = CATEGORIES.find(c => c.id === incident.categories);
+    const cats    = Array.isArray(incident.categories) ? incident.categories : [];
     const lang    = currentLang;
     const title   = lang === 'es' ? incident.title_es : incident.title_en;
     const desc    = lang === 'es' ? incident.description_es : incident.description_en;  
-    const catName = cat ? (lang === 'es' ? cat.name_es : cat.name_en) : '';
+    const catNames = cats.map(c => lang === 'es' ? c.name_es : c.name_en);
     
     const badge = document.getElementById('detail-cat-badge');
-    if (cat) {
-        badge.innerHTML = `<span class="dot" style="background:${cat.color}"></span>${catName}`;
-        badge.style.background = cat.bg;
-        badge.style.color = cat.color;
+    if (badge) {
+        if (cats.length) {
+            const primary = cats[0];
+            badge.innerHTML = `<span class="dot" style="background:${primary.color_hex}"></span>${catNames[0]}`;
+            badge.style.background = `${primary.color_hex}22`;
+            badge.style.color = primary.color_hex;
+        } else {
+            badge.innerHTML = '';
+            badge.style.background = '';
+            badge.style.color = '';
+        }
     }
     
     document.getElementById('detail-title').textContent = title;
@@ -306,7 +312,8 @@ function openDetail(incident) {
     document.getElementById('detail-desc').textContent = desc;
     
     const tagsEl = document.getElementById('detail-tags');
-    tagsEl.innerHTML = [catName, String(incident.year)]
+    tagsEl.innerHTML = [...catNames, String(incident.year)]
+        .filter(Boolean)
         .map(t => `<span class="detail-tag">${t}</span>`).join('');
     
     const imgEl = document.getElementById('detail-img');

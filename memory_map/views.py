@@ -14,7 +14,16 @@ def index(request):
     incidents = (Incident.objects
                  .filter(status=Incident.APPROVED)
                  .prefetch_related("sources", "images", "categories"))
-    categories = list(Category.objects.values("id", "name_es", "name_en", "color_hex"))
+    categories = [
+        {
+            "id": c.id,
+            "name_en": c.name_en,
+            "name_es": c.name_es,
+            "color": c.color_hex,
+            "bg": f"{c.color_hex}22",
+        }
+        for c in Category.objects.all()
+    ]
 
     incidents_data = []
     for i in incidents:
