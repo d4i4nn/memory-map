@@ -11,6 +11,9 @@
 ════════════════════════════════════════════════════════ -->
 <header id="topbar">
     <h1 data-i18n="app_title">Memory Map Archive</h1>
+    <button type="button" id="btn-about" onclick="openAboutModal()" style="background: transparent; border: 1px solid var(--border-color, #ccc); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem;" data-i18n="about_btn">
+            ℹ️ Metodología
+    </button>
     <div id="lang-toggle">
         <button class="active" onclick="setLang('en')">EN</button>
         <button onclick="setLang('es')">ES</button>
@@ -46,7 +49,7 @@
             </div>
             <input id="year-slider" type="range" min="1983" max="2024" value="2024"
                    step="1" oninput="onSliderMove(this.value)" />
-            <div id="year-display">Up to: 2024</div>
+            <div id="year-display">Up to: 2026</div>
         </div>
 <!--  
         <div class="sb-section">
@@ -227,6 +230,28 @@
     </div>
 </div>
  
+<!-- ══════════════════════════════════════════════════════
+     ABOUT / METHODOLOGY MODAL
+════════════════════════════════════════════════════════ -->
+<div id="about-modal-overlay" onclick="closeAboutModalOnOverlay(event)" class="modal-overlay">
+    <div id="about-modal" class="modal">
+        <div class="modal-header">
+            <h2 data-i18n="about_title">Metodología y Archivo</h2>
+            <button id="about-modal-close" onclick="closeAboutModal()" aria-label="Close">×</button>
+        </div>
+        
+        <div class="modal-body" style="padding: 20px; overflow-y: auto; max-height: 70vh; font-size: 0.95rem; line-height: 1.5;">
+            <p data-i18n="about_p1">
+                Este archivo cartográfico documenta y visibiliza hitos y casos vinculados a violaciones de derechos humanos y luchas sociales...
+            </p>
+            <h3 style="margin-top: 15px; font-size: 1.1rem;" data-i18n="about_subtitle">Criterios de validación</h3>
+            <p data-i18n="about_p2">
+                Cada incidente publicado cuenta con fuentes periodísticas contrastadas y pasa por un riguroso proceso de revisión editorial...
+            </p>
+        </div>
+    </div>
+</div>
+
 <!-- Leaflet JS -->
 
 {{ incidents|json_script:"incidents-data" }}
@@ -281,7 +306,13 @@ const STRINGS = {
         results:           "incidents shown",
         verified_badge:    "✓ Verified",
         pending_badge:     "⏳ Pending review",
-    },
+        about_btn: "ℹ️ Methodology",
+        about_title: "Methodology & Archive",
+        about_p1: "This cartographic archive documents incidents...",
+        about_subtitle: "Validation Criteria",
+        about_p2: "Each published incident relies on verified journalistic sources...",
+        },
+
     es: {
         app_title:         "Cartografía de la memoria",
         search:            "Búsqueda",
@@ -318,7 +349,12 @@ const STRINGS = {
         results:           "hitos visibles",
         verified_badge:    "✓ Verificado",
         pending_badge:     "⏳ Pendiente de revisión",
-    }
+        about_btn: "ℹ️ Metodología",
+        about_title: "Metodología y Archivo",
+        about_p1: "Este archivo cartográfico documenta hitos...",
+        about_subtitle: "Criterios de validación",
+        about_p2: "Cada incidente publicado cuenta con fuentes...",
+        }
 };
  
 let currentLang = 'en';
@@ -504,6 +540,21 @@ function closeModalOnOverlay(e) {
     if (e.target === document.getElementById('modal-overlay')) closeModal();
 }
  
+function openAboutModal() {
+    const modal = document.getElementById('about-modal-overlay');
+    if (modal) modal.classList.add('open');
+}
+
+function closeAboutModal() {
+    const modal = document.getElementById('about-modal-overlay');
+    if (modal) modal.classList.remove('open');
+}
+
+function closeAboutModalOnOverlay(e) {
+    if (e.target === document.getElementById('about-modal-overlay')) {
+        closeAboutModal();
+    }
+}
 
  
 /* ═══════════════════════════════════════════════════════════

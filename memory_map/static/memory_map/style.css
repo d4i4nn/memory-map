@@ -588,3 +588,30 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     background: transparent;
     color: var(--text-muted);
 }
+
+#btn-about {
+    background: #d8d1c5 !important;
+    color: #2b2b2b !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    padding: 6px 12px !important;
+    cursor: pointer !important;
+    font-size: 0.90rem !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+}
+
+#btn-about:hover {
+    background: #ccc4b4 !important;
+}
+
+/* El overlay empieza oculto en toda carga de página */
+#modal-overlay, 
+#about-modal-overlay {
+    display: none; 
+}
+
+/* Cuando se le agrega la clase .open, se muestra (flex o block) */
+#modal-overlay.open, 
+#about-modal-overlay.open {
+    display: flex; /* o 'block' según cómo esté centrado tu modal */
+}
